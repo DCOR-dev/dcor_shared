@@ -1,7 +1,7 @@
 dcor_shared
 ===========
 
-|PyPI Version| |Build Status Unix| |Build Status Win| |Coverage Status| |Docs Status|
+|PyPI Version| |Build Status Unix| |Coverage Status|
 
 Functionalities shared by the DCOR CKAN extensions
 
