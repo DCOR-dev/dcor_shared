@@ -1,34 +1,30 @@
 notifications:
   email: false
- - os: linux
-   language: python
-   python: 3.7
- - os: linux
-   language: python
-   python: 3.8
+os: linux
+language: python
+python: 3.8
 install:
 # install binary packages
 - travis_retry pip install --upgrade pip setuptools wheel
-# install all dependencies
+# install package
 - travis_retry pip install -e .
 # for tests:
 - travis_retry pip install codecov coverage flake8
 - pip freeze
 script:
-- coverage run --source=dcor_shared ./setup.py test
-- coverage report -m
-- flake8 tests
+#- coverage run --source=dcor_shared ./setup.py test
+#- coverage report -m
 - flake8 dcor_shared
+- flake8 tests
 after_success:
-- codecov
+#- codecov
 before_deploy:
-- python setup.py sdist
-- bash ./.travis/${TRAVIS_OS_NAME}_build_wheel.sh
+- python setup.py sdist bdist_wheel
 deploy:
   provider: pypi
-  user: "ci_afm"
+  user: "ci_dcor"
   password:
-    secure: "gi8ROhl4V+1NThdrmLaN4aJ7FRYkxiEDv+zK/cFTY1AnCXRNN/UlW3y/Rp27RXFuDS0N7cKSLlo38aPg6bsbx3IMCK39Juyo07nr3Xnv1GbMCLhrvMLqM8unOJnC5+vkWbYROsyo9uYWo6SmXvDnxk+t2zg6fk/Y5XABmYr3x9FZRqUFqAulvWEb3qcE6p2aBR43w0woFR2uyn4MwhTYMYVKWaYnUxllbmYs2iWuMqbep0eodDnxTjomkJL0B0yDE5hYeGe4o5Qp2N2GqGLT06qFeg3xJBkkS6q1tiNtSPvHbU5oaxNgQ3uqiNq+eAB+nk0WIimR/qxRLwj9luWFEKdLqTlzex5vhhjC2wkGnbt5/t3aV2QRBf+L28a3UjNglmSe8lpU6eCkiu4zICCxPhWPq8AO8sNX44sWNxBHcS4hOZDfJD9eb9kXkjYfr2P7eLcDzkXb77IbSH5iBmeDBi3vI49dl+4/zerUvxyeLpNYoTBwUPsH5f3kDqj/sn94or6K94koVqOqr4Pz9MdBCGzyhF/bvubWLFw0BlRgNeANyjQbuxt0/Jq9JHz0vNp7qH3g9O1EX46mzYELCtrObOYD75gMVssWTyYvD9L25Xf0Txw2QHtHyDhu+2w0ivpJ+IcJRWOJZ2sG0b2eILGMbkFaaymEp0NdVfHNR2ooP80="
+    secure: "Z9Venv/ZZHJHIPPteCsDQmirPIlhIfy7QJRSL2By2U/L/M5HDKzo3f3esnB67IjaCpXpVuzKWxzWtIrhGxUxsSvMHRRCabHlA70K7tzDV++BmlTQ9cMHIM3Kh/MkTpo/sKcRNOXkXnrkY1hu1Qjcs9ScR4MVLsMP9kcp4PPNpxNnCC+YBpaRERCbZeG4asMg0J12+B7IS5KfhZRZq21MBT9ZJEGHnus18G0w6vhVhVs8Vri33K03oMJ1VrIoc9pXAac1d7V0NNGRrJOkxAqy8L0wLKKiTocMQOtxzC+WWT3QXtCWc1a5/Oi4wJPznp8R+IYECGjg4yocbFZOwUvxQtqWCY5+GKPFQIgZ2ZQ24I732uCW9A9FT0G3aK9wnIVCIlJYO5sgiv8el1O1a6ONB30r57hTWHlA1LOLlqMtf+tHlImK+bDGvprCdjjOigiXDqYasz+Hfu777HK9GcBFccVaCKenfnNlKuxhPFlg/naID8gubub/bpdlJSnlNlKxnqGpsIN/oWOKyGnmyziZKXQuQESw/VkKx8vK4PS0irXPeF4smRquzy+9SRLeeNsDmpktNRljqfHV6N5Uc1jB3/H/7d4R64aCXd2h3Uq+D9G5UgC1fGfopRz0neMg9WPWVwWmoXBGB+DXjLL+0OrgUWcIHnaviLbUxQXUHniZ3o0="
   on:
     tags: true
   skip_cleanup: true
