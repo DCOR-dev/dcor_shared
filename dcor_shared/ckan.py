@@ -11,8 +11,8 @@ except ImportError:
 
 
 if config:
-    #: CKAN storage path (contains resources, uploaded group, user or organization
-    #: images)
+    #: CKAN storage path (contains resources, uploaded group, user or
+    #: organization images)
     CKAN_STORAGE = config.get('ckan.storage_path', "").rstrip("/")
 
 
