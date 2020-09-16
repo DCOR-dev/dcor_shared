@@ -25,7 +25,7 @@ setup(
     packages=find_packages(),
     package_dir={name: name},
     include_package_data=True,
-    license="AGPL",
+    license="AGPLv3+",
     description=description,
     long_description=open('README.rst').read() if exists('README.rst') else '',
     install_requires=[],
@@ -34,10 +34,12 @@ setup(
     python_requires='>=3.6, <4',
     keywords=["DCOR"],
     classifiers= [
+        'License :: OSI Approved :: GNU Affero General Public License v3 or ' \
+        'later (AGPLv3+)',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 3',
         'Topic :: Scientific/Engineering :: Visualization',
         'Intended Audience :: Science/Research'
-                 ],
+        ],
     platforms=['ALL'],
     )

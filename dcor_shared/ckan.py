@@ -1,11 +1,19 @@
 import os
+import warnings
 
-from ckan.common import config
+try:
+    from ckan.common import config
+except ImportError:
+    config = None
+    warnings.warn("CKAN is not installed. Please make sure that the "
+                  + "environment is active. Some functionalities of "
+                  + "dcor_shared are not available!")
 
 
-#: CKAN storage path (contains resources, uploaded group, user or organization
-#: images)
-CKAN_STORAGE = config.get('ckan.storage_path', "").rstrip("/")
+if config:
+    #: CKAN storage path (contains resources, uploaded group, user or organization
+    #: images)
+    CKAN_STORAGE = config.get('ckan.storage_path', "").rstrip("/")
 
 
 def get_resource_path(rid, create_dirs=False):
