@@ -1,3 +1,5 @@
+0.2.4
+ - enh: allow to get the resource path from outside CKAN
 0.2.3
  - maintenance release
 0.2.2
