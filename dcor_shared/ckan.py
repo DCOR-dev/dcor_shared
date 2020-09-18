@@ -14,6 +14,7 @@ if config:
     CKAN_STORAGE = config.get('ckan.storage_path', "").rstrip("/")
 else:
     # Attempt to load the configuration from the actual ckan.ini
+    CKAN_STORAGE = None
     ckanini = pathlib.Path("/etc/ckan/default/ckan.ini")
     if ckanini.exists():
         # parse the ini file
@@ -27,8 +28,6 @@ else:
                     if key == "ckan.storage_path":
                         CKAN_STORAGE = value.strip()
                         break
-            else:
-                CKAN_STORAGE = None
     if CKAN_STORAGE is None:
         warnings.warn("CKAN is not installed. Please make sure that the "
                       + "environment is active or the ckan.ini file is in "
