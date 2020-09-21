@@ -47,4 +47,4 @@ def get_resource_path(rid, create_dirs=False):
                      os.stat(resources_path).st_gid)
         except OSError:
             pass
-    return path
+    return pathlib.Path(path)
