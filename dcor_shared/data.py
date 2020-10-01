@@ -1,6 +1,13 @@
 import pathlib
 import time
 
+try:
+    from ckan.common import config
+    DCOR_DEPOT_AVAILABLE = "dcor_depot" in config.get('ckan.plugins', "")
+except ImportError:
+    DCOR_DEPOT_AVAILABLE = False
+
+
 #: Content of the dummy file created when importing data.
 DUMMY_BYTES = b"[Data import pending]"
 
@@ -25,7 +32,7 @@ def wait_for_resource(path):
         elif not path.exists():
             time.sleep(0.05)
             continue
-        elif not path.is_symlink():
+        elif DCOR_DEPOT_AVAILABLE and not path.is_symlink():
             # Resource is only available when it is symlinked by
             # the ckanext.dcor_depot `symlink_user_dataset` job
             # (or by the ckanext.dcor_depot importers).
