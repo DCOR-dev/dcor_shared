@@ -25,6 +25,12 @@ def wait_for_resource(path):
         elif not path.exists():
             time.sleep(0.05)
             continue
+        elif not path.is_symlink():
+            # Resource is only available when it is symlinked by
+            # the ckanext.dcor_depot `symlink_user_dataset` job
+            # (or by the ckanext.dcor_depot importers).
+            time.sleep(0.05)
+            continue
         elif path.stat().st_size < 2 * ld:
             with path.open("rb") as fd:
                 data = fd.read(ld)
