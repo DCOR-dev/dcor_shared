@@ -12,7 +12,7 @@ year = "2020"
 sys.path.insert(0, realpath(dirname(__file__))+"/"+name)
 try:
     from _version import version  # @UnresolvedImport
-except:
+except BaseException:
     version = "unknown"
 
 
@@ -33,9 +33,9 @@ setup(
     tests_require=["pytest"],
     python_requires='>=3.6, <4',
     keywords=["DCOR"],
-    classifiers= [
-        'License :: OSI Approved :: GNU Affero General Public License v3 or ' \
-        'later (AGPLv3+)',
+    classifiers=[
+        'License :: OSI Approved :: GNU Affero General Public License v3 or '
+        + 'later (AGPLv3+)',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 3',
         'Topic :: Scientific/Engineering :: Visualization',
