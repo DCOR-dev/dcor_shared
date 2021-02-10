@@ -3,9 +3,8 @@ import time
 
 try:
     from ckan.common import config
-    DCOR_DEPOT_AVAILABLE = "dcor_depot" in config.get('ckan.plugins', "")
 except ImportError:
-    DCOR_DEPOT_AVAILABLE = False
+    config = {}
 
 
 #: Content of the dummy file created when importing data.
@@ -23,16 +22,18 @@ def wait_for_resource(path):
     we just check that the file is not a dummy file anymore.
     """
     path = pathlib.Path(path)
+    dcor_depot_available = "dcor_depot" in config.get('ckan.plugins', "")
     timeout = 10
     t0 = time.time()
     ld = len(DUMMY_BYTES)
     while True:
         if time.time() - t0 > timeout:
-            raise OSError("Data import seems to take too long!")
+            raise OSError("Data import seems to take too long "
+                          "for '{}'!".format(path))
         elif not path.exists():
             time.sleep(0.05)
             continue
-        elif DCOR_DEPOT_AVAILABLE and not path.is_symlink():
+        elif dcor_depot_available and not path.is_symlink():
             # Resource is only available when it is symlinked by
             # the ckanext.dcor_depot `symlink_user_dataset` job
             # (or by the ckanext.dcor_depot importers).
