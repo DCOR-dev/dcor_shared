@@ -39,13 +39,10 @@ def wait_for_resource(path):
             # (or by the ckanext.dcor_depot importers).
             time.sleep(0.05)
             continue
-        elif path.stat().st_size < 2 * ld:
-            with path.open("rb") as fd:
-                data = fd.read(ld)
-            if data == DUMMY_BYTES:
-                # wait a bit
-                time.sleep(0.01)
-                continue
+        elif path.stat().st_size == ld and path.read_bytes() == DUMMY_BYTES:
+            # wait a bit
+            time.sleep(0.01)
+            continue
         else:
             # not a dummy file
             break

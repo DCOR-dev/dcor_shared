@@ -1,3 +1,5 @@
+0.2.9
+ - fix: wait_for_resource did not work for very small files
 0.2.8
  - enh: introduce get_resource_path and check for availability of
    ckanext-dcor_depot on-the-fly, which makes it possible to run
