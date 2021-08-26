@@ -23,7 +23,9 @@ def wait_for_resource(path):
     """
     path = pathlib.Path(path)
     dcor_depot_available = "dcor_depot" in config.get('ckan.plugins', "")
-    timeout = 10
+    # Initially this was set to 10s, but if `/data` is mounted on a
+    # network share then this part here just takes too long.
+    timeout = 500
     t0 = time.time()
     ld = len(DUMMY_BYTES)
     while True:
