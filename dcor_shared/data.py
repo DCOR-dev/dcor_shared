@@ -11,7 +11,7 @@ except ImportError:
 DUMMY_BYTES = b"[Data import pending]"
 
 
-def wait_for_resource(path):
+def wait_for_resource(path, timeout=10):
     """Wait for resource if it is uploaded manually
 
     This function can be used by other plugins to ensure that
@@ -25,7 +25,6 @@ def wait_for_resource(path):
     dcor_depot_available = "dcor_depot" in config.get('ckan.plugins', "")
     # Initially this was set to 10s, but if `/data` is mounted on a
     # network share then this part here just takes too long.
-    timeout = 500
     t0 = time.time()
     ld = len(DUMMY_BYTES)
     while True:

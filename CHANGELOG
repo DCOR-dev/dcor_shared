@@ -1,3 +1,7 @@
+0.2.11
+ - enh: decrease timeout value for `wait_for_resource` back to 10s,
+   because background jobs are now ran sequentially and after
+   the symlink job
 0.2.10
  - enh: increase timeout value for `wait_for_resource` to 500s
 0.2.9
