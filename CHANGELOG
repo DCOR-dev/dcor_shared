@@ -1,3 +1,5 @@
+0.2.12
+ - ref: use f-strings
 0.2.11
  - enh: decrease timeout value for `wait_for_resource` back to 10s,
    because background jobs are now ran sequentially and after

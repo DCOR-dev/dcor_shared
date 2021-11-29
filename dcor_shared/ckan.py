@@ -10,8 +10,8 @@ except ImportError:
 
 def get_resource_path(rid, create_dirs=False):
     resources_path = get_storage_path() + "/resources"
-    pdir = "{}/{}/{}".format(resources_path, rid[:3], rid[3:6])
-    path = "{}/{}".format(pdir, rid[6:])
+    pdir = f"{resources_path}/{rid[:3]}/{rid[3:6]}"
+    path = f"{pdir}/{rid[6:]}"
     if create_dirs:
         try:
             os.makedirs(pdir)
