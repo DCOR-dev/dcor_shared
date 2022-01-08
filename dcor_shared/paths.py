@@ -1,11 +1,8 @@
 import pathlib
 
-from .ckan import (
-    get_ckan_config_path,
-    get_ckan_config_option,
-    get_ckan_storage_path,  # noqa: F401
-    get_ckan_webassets_path  # noqa: F401
-)
+from .ckan import get_ckan_config_path, get_ckan_config_option
+from .ckan import get_ckan_storage_path, get_ckan_webassets_path  # noqa: F401
+
 from .parse import get_ini_config_option
 
 

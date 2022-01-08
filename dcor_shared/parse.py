@@ -22,4 +22,3 @@ def parse_ini_config(ini):
                 key, value = line.split("=", 1)
                 opt_dict[key.strip()] = value.strip()
     return opt_dict
-
