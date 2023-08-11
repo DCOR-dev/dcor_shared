@@ -1,6 +1,7 @@
 from os.path import dirname, exists, realpath
 from setuptools import setup, find_packages
 import sys
+import warnings
 
 author = "Paul Müller"
 authors = [author]
@@ -15,6 +16,19 @@ try:
 except BaseException:
     version = "unknown"
 
+try:
+    # Make sure this fails for old CKAN versions
+    import ckan
+    ckan_version = [int(v) for v in ckan.__version__.split(".")]
+    if ckan_version < [2, 10, 1]:
+        raise ValueError(
+            f"Your CKAN version {ckan_version} is not supported! If you "
+            f"are still on CKAN 2.9.5, then the following package versions "
+            f"are supported:"
+            f"\n dcor_shared<=0.3.1"
+            )
+except ImportError:
+    warnings.warn("CKAN not installed, supported version check skipped.")
 
 setup(
     name=name,
