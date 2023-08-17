@@ -16,7 +16,7 @@ def get_ckan_config_option(option):
     taken from there. Else, the configuration is taken from the
     configuration file returned by :func:`get_ckan_config_path`.
     """
-    if ckan_common:
+    if ckan_common and ckan_common.config:
         # Get from current configuration (The `get` method in CKAN 2.10
         # returns default values if not placeholder is specified)
         opt = ckan_common.config.get(option)
