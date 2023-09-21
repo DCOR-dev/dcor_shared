@@ -1,3 +1,4 @@
+import hashlib
 import pathlib
 import time
 
@@ -9,6 +10,15 @@ except ImportError:
 
 #: Content of the dummy file created when importing data.
 DUMMY_BYTES = b"[Data import pending]"
+
+
+def sha256sum(path):
+    """Compute the SHA256 hash of a file in 1MB chunks"""
+    file_hash = hashlib.sha256()
+    with open(path, "rb") as fd:
+        while data := fd.read(2 ** 20):
+            file_hash.update(data)
+    return file_hash.hexdigest()
 
 
 def wait_for_resource(path, timeout=10):
