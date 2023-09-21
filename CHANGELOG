@@ -1,3 +1,5 @@
+0.4.3
+ - enh: import get_ckan_config_option to top module
 0.4.2
  - enh: add sha256sum method
 0.4.1
