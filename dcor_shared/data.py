@@ -28,7 +28,7 @@ def wait_for_resource(path, timeout=10):
     a resource is available for processing.
 
     The ckanext-dcor_depot plugin imports data by uploading
-    dummy files and then hard-linking to data on disk. Here
+    dummy files and then sym-linking to data on disk. Here
     we just check that the file is not a dummy file anymore.
     """
     path = pathlib.Path(path)
