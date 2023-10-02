@@ -14,6 +14,20 @@ To install the latest release, simply run:
 
     pip install dcor_shared
 
+Testing
+-------
+Testing is done via vagrant in a virtualmachine using the
+`dcor-test <https://app.vagrantup.com/paulmueller/boxes/dcor-test/>` image.
+Make sure that `vagrant` and `virtualbox` are installed and run the
+following commands in the root of this repository:
+
+::
+
+    # Setup virtual machine using `Vagrantfile`
+    vagrant up
+    # Run the tests
+    vagrant ssh -- sudo bash /testing/vagrant-run-tests.sh
+
 
 .. |PyPI Version| image:: https://img.shields.io/pypi/v/dcor_shared.svg
    :target: https://pypi.python.org/pypi/dcor_shared
