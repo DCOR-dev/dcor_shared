@@ -1,3 +1,5 @@
+0.5.0
+ - feat: migrate s3 submodule from ckanext.dcor_depot to dcor_shared
 0.4.4
  - maintenance release
 0.4.3
