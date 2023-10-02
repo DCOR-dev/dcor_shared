@@ -49,6 +49,33 @@ def test_make_object_public(tmp_path):
     assert sha256sum(dl_path) == sha256sum(path)
 
 
+def test_make_object_public_no_such_key(tmp_path):
+    path = data_path / "calibration_beads_47.rtdc"
+    bucket_name = f"test-circle-{uuid.uuid4()}"
+    rid = str(uuid.uuid4())
+    object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
+    s3_url = s3.upload_file(
+        bucket_name=bucket_name,
+        object_name=object_name,
+        path=path,
+        sha256=sha256sum(path),
+        private=True)
+    # Make sure object is not available publicly
+    response = requests.get(s3_url)
+    assert not response.ok, "resource is private"
+    assert response.status_code == 403, "resource is private"
+    # Try to make a non-existent object publicly accessible, no errors
+    bad_object_name = object_name + "a"
+    s3.make_object_public(bucket_name=bucket_name,
+                          object_name=bad_object_name,
+                          missing_ok=True)
+    s3_client, _, _ = s3.get_s3()
+    with pytest.raises(s3_client.exceptions.NoSuchKey):
+        s3.make_object_public(bucket_name=bucket_name,
+                              object_name=bad_object_name,
+                              missing_ok=False)
+
+
 def test_presigned_url(tmp_path):
     path = data_path / "calibration_beads_47.rtdc"
     bucket_name = f"test-circle-{uuid.uuid4()}"

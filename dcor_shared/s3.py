@@ -71,27 +71,44 @@ def is_available():
     return s3_key_id and s3_secret
 
 
-def make_object_public(bucket_name, object_name):
+def make_object_public(bucket_name, object_name, missing_ok=False):
+    """Make an S3 object public by setting the public=true tag
+
+    Parameters
+    ----------
+    bucket_name: str
+        Name of the bucket
+    object_name: str
+        Key of the object in the bucket
+    missing_ok: bool
+        Whether to raise S3.Client.exceptions.NoSuchKey or ignore
+        missing `object_name`
+    """
     s3_client, _, _ = get_s3()
-    response = s3_client.get_object_tagging(
-        Bucket=bucket_name,
-        Key=object_name)
-    tags = []
-    for item in response["TagSet"]:
-        tags.append(f"{item['Key']}={item['Value']}")
-    if not tags.count("public=true"):
-        s3_client.put_object_tagging(
+    try:
+        response = s3_client.get_object_tagging(
             Bucket=bucket_name,
-            Key=object_name,
-            Tagging={
-                'TagSet': [
-                    {
-                        'Key': 'public',
-                        'Value': 'true',
-                    },
-                ],
-            },
-        )
+            Key=object_name)
+    except s3_client.exceptions.NoSuchKey:
+        if not missing_ok:
+            raise
+    else:
+        tags = []
+        for item in response["TagSet"]:
+            tags.append(f"{item['Key']}={item['Value']}")
+        if not tags.count("public=true"):
+            s3_client.put_object_tagging(
+                Bucket=bucket_name,
+                Key=object_name,
+                Tagging={
+                    'TagSet': [
+                        {
+                            'Key': 'public',
+                            'Value': 'true',
+                        },
+                    ],
+                },
+            )
 
 
 @functools.lru_cache()
