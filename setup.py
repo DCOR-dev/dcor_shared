@@ -42,7 +42,7 @@ setup(
     license="AGPLv3+",
     description=description,
     long_description=open('README.rst').read() if exists('README.rst') else '',
-    install_requires=[],
+    install_requires=["boto3"],
     python_requires='>=3.6, <4',
     keywords=["DCOR"],
     classifiers=[
