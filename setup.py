@@ -43,8 +43,6 @@ setup(
     description=description,
     long_description=open('README.rst').read() if exists('README.rst') else '',
     install_requires=[],
-    setup_requires=["pytest-runner"],
-    tests_require=["pytest"],
     python_requires='>=3.6, <4',
     keywords=["DCOR"],
     classifiers=[

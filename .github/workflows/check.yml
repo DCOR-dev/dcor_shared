@@ -34,6 +34,6 @@ jobs:
         coverage run --source=dcor_shared setup.py test
     - name: Lint with flake8
       run: |
-        flake8 .
+        flake8 --exclude _version.py .
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
