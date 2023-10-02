@@ -12,7 +12,7 @@ pip install --upgrade pip wheel
 dcor update --yes
 # Install the current package in editable mode for testing
 pip install -e .
-pip install -r ckanext/dcor_depot/tests/requirements.txt
+pip install -r tests/requirements.txt
 # run tests with coverage
 coverage run --source=dcor_shared -m pytest -p no:warnings tests
 # Get GitHub environment variables so codecov detects GH Actions (allow command to fail)
