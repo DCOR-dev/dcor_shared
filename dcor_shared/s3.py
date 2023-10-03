@@ -10,7 +10,8 @@ import botocore.exceptions
 from .ckan import get_ckan_config_option
 
 
-def create_presigned_url(bucket_name, object_name, expiration=3600):
+def create_presigned_url(bucket_name, object_name, expiration=3600,
+                         filename=None):
     """Generate a presigned URL to share an S3 object
 
     Parameters
@@ -21,6 +22,9 @@ def create_presigned_url(bucket_name, object_name, expiration=3600):
         Name of the object
     expiration: int
         Time in seconds for the presigned URL to remain valid
+    filename: str
+        Name of the file as it would appear in the response content
+        disposition header sent by the server
 
     Returns
     -------
@@ -29,9 +33,14 @@ def create_presigned_url(bucket_name, object_name, expiration=3600):
     """
     # Generate a presigned URL for the S3 object
     s3_client, _, _ = get_s3()
+    params = {"Bucket": bucket_name,
+              "Key": object_name}
+    if filename is not None:
+        params["ResponseContentDisposition"] = \
+            f"attachment; filename = {filename}"
     psurl = s3_client.generate_presigned_url(
         'get_object',
-        Params={'Bucket': bucket_name, 'Key': object_name},
+        Params=params,
         ExpiresIn=expiration)
     # The response contains the presigned URL
     return psurl
