@@ -195,7 +195,8 @@ def require_bucket(bucket_name):
     return s3_bucket
 
 
-def upload_file(bucket_name, object_name, path, sha256, private=True):
+def upload_file(bucket_name, object_name, path, sha256, private=True,
+                override=False):
     """Upload a file to a bucket
 
     Parameters
@@ -212,6 +213,8 @@ def upload_file(bucket_name, object_name, path, sha256, private=True):
         Whether the object should remain private. If set to False,
         a tag "public:true" is added to the object which is picket up
         by the bucket policy defined in :func:`require_bucket`.
+    override: bool
+        Whether to override existing objects in s3
 
     Returns
     -------
@@ -221,43 +224,59 @@ def upload_file(bucket_name, object_name, path, sha256, private=True):
     path_size = pathlib.Path(path).stat().st_size
     s3_client, _, _ = get_s3()
     s3_bucket = require_bucket(bucket_name)
-    s3_bucket.upload_file(Filename=str(path),
-                          Key=object_name,
-                          # ExtraArgs={
-                          # # verification of the upload (breaks OpenStack)
-                          # "ChecksumAlgorithm": "SHA256",
-                          # # This is not supported in MinIO:
-                          # "ChecksumSHA256": sha256
-                          # }
-                          )
-    # Make sure the upload worked properly by computing the SHA256 sum.
-    # Download the file directly into the hasher.
-    hasher = hashlib.sha256()
-    # This is an increment of 1MB. If you change this, please also update
-    # the tests for large uploads.
-    increment = 2**20
-    start_byte = 0
-    max_size = path_size
-    stop_byte = min(increment, max_size)
-    while start_byte < max_size:
-        resp = s3_client.get_object(Bucket=bucket_name,
-                                    Key=object_name,
-                                    Range=f"bytes={start_byte}-{stop_byte}")
-        content = resp['Body'].read()
-        if not content:
-            break
-        hasher.update(content)
-        start_byte = stop_byte + 1  # range is inclusive
-        stop_byte = min(max_size, stop_byte + increment)
-    s3_sha256 = hasher.hexdigest()
-    if sha256 != s3_sha256:
-        raise ValueError(f"Checksum mismatch for {bucket_name}:{object_name}!")
 
-    if not private:
-        # If the resource is not private, add a tag, so it is picked up
-        # by the bucket policy for public accessibility.
-        make_object_public(bucket_name=bucket_name,
-                           object_name=object_name)
+    perform_upload = True
+    if not override:
+        try:
+            s3_client.head_object(Bucket=bucket_name, Key=object_name)
+        except (s3_client.exceptions.NoSuchKey,
+                s3_client.exceptions.ClientError):
+            object_exists = False
+        else:
+            object_exists = True
+        perform_upload = not object_exists
+
+    if perform_upload:
+        s3_bucket.upload_file(Filename=str(path),
+                              Key=object_name,
+                              # ExtraArgs={
+                              # # verification of the upload (breaks OpenStack)
+                              # "ChecksumAlgorithm": "SHA256",
+                              # # This is not supported in MinIO:
+                              # "ChecksumSHA256": sha256
+                              # }
+                              )
+        # Make sure the upload worked properly by computing the SHA256 sum.
+        # Download the file directly into the hasher.
+        hasher = hashlib.sha256()
+        # This is an increment of 1MB. If you change this, please also update
+        # the tests for large uploads.
+        increment = 2**20
+        start_byte = 0
+        max_size = path_size
+        stop_byte = min(increment, max_size)
+        while start_byte < max_size:
+            resp = s3_client.get_object(
+                Bucket=bucket_name,
+                Key=object_name,
+                Range=f"bytes={start_byte}-{stop_byte}")
+            content = resp['Body'].read()
+            if not content:
+                break
+            hasher.update(content)
+            start_byte = stop_byte + 1  # range is inclusive
+            stop_byte = min(max_size, stop_byte + increment)
+        s3_sha256 = hasher.hexdigest()
+        if sha256 != s3_sha256:
+            raise ValueError(
+                f"Checksum mismatch for {bucket_name}:{object_name}!")
+
+        if not private:
+            # If the resource is not private, add a tag, so it is picked up
+            # by the bucket policy for public accessibility.
+            make_object_public(bucket_name=bucket_name,
+                               object_name=object_name)
 
     endpoint_url = get_ckan_config_option("dcor_object_store.endpoint_url")
-    return f"{endpoint_url}/{bucket_name}/{object_name}"
+    object_loc = f"{endpoint_url}/{bucket_name}/{object_name}"
+    return object_loc

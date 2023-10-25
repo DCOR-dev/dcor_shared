@@ -102,6 +102,68 @@ def test_presigned_url(tmp_path):
     assert sha256sum(dl_path) == sha256sum(path)
 
 
+def test_upload_override(tmp_path):
+    path1 = tmp_path / "file1.rtdc"
+    path2 = tmp_path / "file2.rtdc"
+    with path1.open("wb") as fd:
+        for ii in range(100):
+            fd.write(b"0123456789")
+    with path2.open("wb") as fd:
+        for ii in range(50):
+            fd.write(b"0123456789")
+    # sanity check
+    assert sha256sum(path1) != sha256sum(path2)
+    # Proceed as in the other tests
+    bucket_name = f"test-circle-{uuid.uuid4()}"
+    rid = str(uuid.uuid4())
+    object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
+
+    # Original file
+    s3_url = s3.upload_file(
+        bucket_name=bucket_name,
+        object_name=object_name,
+        path=path1,
+        sha256=sha256sum(path1),
+        private=False,
+        override=False
+    )
+    response = requests.get(s3_url)
+    dl_path = tmp_path / "test1.rtdc"
+    with dl_path.open("wb") as fd:
+        fd.write(response.content)
+    assert sha256sum(dl_path) == sha256sum(path1)
+
+    # New file without override
+    s3.upload_file(
+        bucket_name=bucket_name,
+        object_name=object_name,
+        path=path2,
+        sha256=sha256sum(path2),
+        private=False,
+        override=False,
+    )
+    response = requests.get(s3_url)
+    dl_path = tmp_path / "test1.rtdc"
+    with dl_path.open("wb") as fd:
+        fd.write(response.content)
+    assert sha256sum(dl_path) == sha256sum(path1)
+
+    # New file with override
+    s3.upload_file(
+        bucket_name=bucket_name,
+        object_name=object_name,
+        path=path2,
+        sha256=sha256sum(path2),
+        private=False,
+        override=True,
+    )
+    response = requests.get(s3_url)
+    dl_path = tmp_path / "test2.rtdc"
+    with dl_path.open("wb") as fd:
+        fd.write(response.content)
+    assert sha256sum(dl_path) == sha256sum(path2)
+
+
 def test_upload_large_file(tmp_path):
     # Create a ~100MB file
     path = tmp_path / "large_file.rtdc"
