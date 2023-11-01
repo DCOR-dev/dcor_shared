@@ -1,3 +1,4 @@
+import mock
 import pathlib
 import uuid
 
@@ -100,6 +101,41 @@ def test_presigned_url(tmp_path):
     with dl_path.open("wb") as fd:
         fd.write(response2.content)
     assert sha256sum(dl_path) == sha256sum(path)
+
+
+@mock.patch(
+    "dcor_shared.s3.create_time",
+    new=iter([100, 100, 100,  # url0, url1, url2
+              100, 102, 104,
+              105, 109, 112,
+              116, 117, 120]).__next__)
+def test_presigned_url_caching():
+    kwargs = {"bucket_name": "peterpan",
+              "object_name": "object/a",
+              }
+    urls0 = [s3.create_presigned_url_until(bucket_name="peterpan",
+                                           object_name="object/a",
+                                           expires_at=150,
+                                           filename=None)]
+    urls1 = [s3.create_presigned_url_until(bucket_name="peterpan",
+                                           object_name="object/a",
+                                           expires_at=160,
+                                           filename=None)]
+    urls2 = [s3.create_presigned_url_until(bucket_name="peterpan",
+                                           object_name="object/a",
+                                           expires_at=170,
+                                           filename=None)]
+    for _ in range(3):
+        urls0.append(s3.create_presigned_url(expiration=50, **kwargs))
+    assert len(set(urls0)) == 1
+
+    for _ in range(3):
+        urls1.append(s3.create_presigned_url(expiration=50, **kwargs))
+    assert len(set(urls1)) == 1
+
+    for _ in range(3):
+        urls2.append(s3.create_presigned_url(expiration=50, **kwargs))
+    assert len(set(urls2)) == 1
 
 
 def test_upload_override(tmp_path):

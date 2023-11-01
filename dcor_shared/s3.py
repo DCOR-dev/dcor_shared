@@ -2,6 +2,7 @@ import functools
 import hashlib
 import json
 import pathlib
+import time
 import warnings
 
 import boto3
@@ -30,6 +31,46 @@ def create_presigned_url(bucket_name, object_name, expiration=3600,
     -------
     psurl: str
         Presigned URL as string.
+
+    Notes
+    -----
+    This method results in times that vary up to 10% from the `expiration`
+    time in order to be able to cache the resulting URL.
+    """
+    now = int(create_time())
+    wrap = int(expiration*.2)
+    rest = now % wrap
+    if rest < wrap / 2:
+        t0 = now - rest
+    else:
+        t0 = now - rest + wrap
+    return create_presigned_url_until(bucket_name=bucket_name,
+                                      object_name=object_name,
+                                      expires_at=t0 + expiration,
+                                      filename=filename)
+
+
+@functools.lru_cache()
+def create_presigned_url_until(bucket_name, object_name, expires_at,
+                               filename=None):
+    """Cached `create_presigned_url` with expiry time point
+
+    Parameters
+    ----------
+    bucket_name: str
+        Name of the bucket
+    object_name: str
+        Name of the object
+    expires_at: int
+        Absolute time in seconds (`time.time()`) at which the URL expires
+    filename: str
+        Name of the file as it would appear in the response content
+        disposition header sent by the server
+
+    Returns
+    -------
+    psurl: str
+        Presigned URL as string.
     """
     # Generate a presigned URL for the S3 object
     s3_client, _, _ = get_s3()
@@ -41,9 +82,13 @@ def create_presigned_url(bucket_name, object_name, expiration=3600,
     psurl = s3_client.generate_presigned_url(
         'get_object',
         Params=params,
-        ExpiresIn=expiration)
+        ExpiresIn=expires_at - create_time())
     # The response contains the presigned URL
     return psurl
+
+
+def create_time():
+    return time.time()
 
 
 @functools.lru_cache()
