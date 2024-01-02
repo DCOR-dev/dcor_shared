@@ -11,6 +11,36 @@ import botocore.exceptions
 from .ckan import get_ckan_config_option
 
 
+def compute_checksum(bucket_name, object_name, max_size=None):
+    """Compute the SHA256 checksum of an S3 object
+
+    The hash is computed in memory as the file is downloaded in chunks.
+    """
+    s3_client, _, s3_resource = get_s3()
+    if max_size is None:
+        obj = s3_resource.Object(Bucket=bucket_name, Key=object_name)
+        max_size = obj.content_length
+    hasher = hashlib.sha256()
+    # This is an increment of 1MB. If you change this, please also update
+    # the tests for large uploads.
+    increment = 2 ** 20
+    start_byte = 0
+    stop_byte = min(increment, max_size)
+    while start_byte < max_size:
+        resp = s3_client.get_object(
+            Bucket=bucket_name,
+            Key=object_name,
+            Range=f"bytes={start_byte}-{stop_byte}")
+        content = resp['Body'].read()
+        if not content:
+            break
+        hasher.update(content)
+        start_byte = stop_byte + 1  # range is inclusive
+        stop_byte = min(max_size, stop_byte + increment)
+    s3_sha256 = hasher.hexdigest()
+    return s3_sha256
+
+
 def create_presigned_url(bucket_name, object_name, expiration=3600,
                          filename=None):
     """Generate a presigned URL to share an S3 object
@@ -292,26 +322,9 @@ def upload_file(bucket_name, object_name, path, sha256, private=True,
                               # }
                               )
         # Make sure the upload worked properly by computing the SHA256 sum.
-        # Download the file directly into the hasher.
-        hasher = hashlib.sha256()
-        # This is an increment of 1MB. If you change this, please also update
-        # the tests for large uploads.
-        increment = 2**20
-        start_byte = 0
-        max_size = path_size
-        stop_byte = min(increment, max_size)
-        while start_byte < max_size:
-            resp = s3_client.get_object(
-                Bucket=bucket_name,
-                Key=object_name,
-                Range=f"bytes={start_byte}-{stop_byte}")
-            content = resp['Body'].read()
-            if not content:
-                break
-            hasher.update(content)
-            start_byte = stop_byte + 1  # range is inclusive
-            stop_byte = min(max_size, stop_byte + increment)
-        s3_sha256 = hasher.hexdigest()
+        s3_sha256 = compute_checksum(bucket_name=bucket_name,
+                                     object_name=object_name,
+                                     max_size=path_size)
         if sha256 != s3_sha256:
             raise ValueError(
                 f"Checksum mismatch for {bucket_name}:{object_name}!")

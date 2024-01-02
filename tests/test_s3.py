@@ -1,3 +1,4 @@
+import hashlib
 import mock
 import pathlib
 import uuid
@@ -11,12 +12,30 @@ from dcor_shared import s3, sha256sum
 data_path = pathlib.Path(__file__).parent / "data"
 
 
+def test_compute_checksum():
+    path = data_path / "calibration_beads_47.rtdc"
+    bucket_name = f"test-circle-{uuid.uuid4()}"
+    rid = str(uuid.uuid4())
+    object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
+    s3.upload_file(
+        bucket_name=bucket_name,
+        object_name=object_name,
+        path=path,
+        sha256=sha256sum(path),
+        private=True)
+
+    hash_exp = hashlib.sha256(path.read_bytes()).hexdigest()
+    hash_act = s3.compute_checksum(bucket_name=bucket_name,
+                                   object_name=object_name)
+    assert hash_exp == hash_act
+
+
 def test_create_bucket_again():
     bucket_name = f"test-circle-{uuid.uuid4()}"
     bucket = s3.require_bucket(bucket_name)
     # this is cached
     bucket2 = s3.require_bucket(bucket_name)
-    assert bucket2 is bucket, "chached"
+    assert bucket2 is bucket, "cached"
     s3.require_bucket.cache_clear()
     bucket3 = s3.require_bucket(bucket_name)
     assert bucket3 is not bucket, "new object"

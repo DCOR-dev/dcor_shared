@@ -1,3 +1,5 @@
+0.5.5
+ - ref: factor out s3.compute_checksum method
 0.5.4
  - enh: cache presigned URLs with 10% tolerance
 0.5.3
