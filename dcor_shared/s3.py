@@ -195,6 +195,19 @@ def make_object_public(bucket_name, object_name, missing_ok=False):
             )
 
 
+def object_exists(bucket_name, object_name):
+    """Check whether an object exists"""
+    s3_client, _, _ = get_s3()
+    try:
+        s3_client.head_object(Bucket=bucket_name, Key=object_name)
+    except (s3_client.exceptions.NoSuchKey,
+            s3_client.exceptions.ClientError):
+        obj_exists = False
+    else:
+        obj_exists = True
+    return obj_exists
+
+
 @functools.lru_cache()
 def require_bucket(bucket_name):
     """Create an S3 bucket if it does not exist yet
@@ -302,14 +315,8 @@ def upload_file(bucket_name, object_name, path, sha256, private=True,
 
     perform_upload = True
     if not override:
-        try:
-            s3_client.head_object(Bucket=bucket_name, Key=object_name)
-        except (s3_client.exceptions.NoSuchKey,
-                s3_client.exceptions.ClientError):
-            object_exists = False
-        else:
-            object_exists = True
-        perform_upload = not object_exists
+        perform_upload = not object_exists(bucket_name=bucket_name,
+                                           object_name=object_name)
 
     if perform_upload:
         s3_bucket.upload_file(Filename=str(path),

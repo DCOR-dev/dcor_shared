@@ -96,6 +96,27 @@ def test_make_object_public_no_such_key(tmp_path):
                               missing_ok=False)
 
 
+def test_object_exists():
+    path = data_path / "calibration_beads_47.rtdc"
+    bucket_name = f"test-circle-{uuid.uuid4()}"
+    rid = str(uuid.uuid4())
+    object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
+    s3.upload_file(
+        bucket_name=bucket_name,
+        object_name=object_name,
+        path=path,
+        sha256=sha256sum(path),
+        private=True)
+
+    assert s3.object_exists(bucket_name=bucket_name,
+                            object_name=object_name)
+    # sanity checks
+    assert not s3.object_exists(bucket_name=bucket_name,
+                                object_name=f"peter/pan-{uuid.uuid4()}")
+    assert not s3.object_exists(bucket_name=f"hansgunter-{uuid.uuid4()}",
+                                object_name=object_name)
+
+
 def test_presigned_url(tmp_path):
     path = data_path / "calibration_beads_47.rtdc"
     bucket_name = f"test-circle-{uuid.uuid4()}"
