@@ -18,7 +18,7 @@ def compute_checksum(bucket_name, object_name, max_size=None):
     """
     s3_client, _, s3_resource = get_s3()
     if max_size is None:
-        obj = s3_resource.Object(Bucket=bucket_name, Key=object_name)
+        obj = s3_resource.Object(bucket_name=bucket_name, key=object_name)
         max_size = obj.content_length
     hasher = hashlib.sha256()
     # This is an increment of 1MB. If you change this, please also update
