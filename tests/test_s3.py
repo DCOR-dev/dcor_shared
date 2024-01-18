@@ -1,5 +1,5 @@
 import hashlib
-import mock
+from unittest import mock
 import pathlib
 import uuid
 
