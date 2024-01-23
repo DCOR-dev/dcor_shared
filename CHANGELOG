@@ -1,3 +1,7 @@
+0.6.0
+ - BREAKING CHANGE: wait_for_resource now requires the resource_id
+   instead of the resource path
+ - enh: cache calls to data.wait_for_resource
 0.5.6
  - maintenance release
 0.5.5
