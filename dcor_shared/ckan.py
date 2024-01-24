@@ -1,8 +1,6 @@
 import os
 import pathlib
 
-from ckan import common as ckan_common
-
 from .parse import get_ini_config_option
 
 
@@ -13,6 +11,7 @@ def get_ckan_config_option(option):
     taken from there. Else, the configuration is taken from the
     configuration file returned by :func:`get_ckan_config_path`.
     """
+    from ckan import common as ckan_common
     if ckan_common.config:
         # Get from current configuration (The `get` method in CKAN 2.10
         # returns default values if not placeholder is specified)

@@ -4,9 +4,6 @@ import pathlib
 import time
 import warnings
 
-from ckan.common import config
-from ckan import logic
-
 from .ckan import get_resource_path
 
 
@@ -46,6 +43,9 @@ def wait_for_resource(resource_id: str,
        is called, so we only check for the existence of the resource
        in ckan and whether the `s3_available` attribute is defined.
     """
+    from ckan.common import config
+    from ckan import logic
+
     if len(resource_id) != 36:
         warnings.warn("Please pass the CKAN resource id as `resource_id` "
                       "instead of a string or a path. This will raise an "

@@ -1,3 +1,6 @@
+0.6.1
+ - ref: migrate ckan imports to function code so dcor_control
+   works on any machine
 0.6.0
  - BREAKING CHANGE: wait_for_resource now requires the resource_id
    instead of the resource path
