@@ -41,6 +41,80 @@ def compute_checksum(bucket_name, object_name, max_size=None):
     return s3_sha256
 
 
+def create_presigned_upload_url(bucket_name, object_name,
+                                expiration=86400):
+    """Create a presigned URL for uploading to S3
+
+    Parameters
+    ----------
+    bucket_name: str
+        Name of the bucket
+    object_name: str
+        Name of the object
+    expiration: int
+        Time in seconds for the presigned URL to remain valid
+
+    Returns
+    -------
+    psurl: str
+        Presigned upload URL as string
+    fields: dict
+        Dictionary for `data` to use during upload:
+        - key: identical to `object_name`
+        - AWSAccessKeyId: S3 access key name for authentication
+        - policy: base64-encoded policy (expiration, conditions: bucket, key)
+        - signature: signature created by the server to verify the request
+
+    Example
+    -------
+    To upload a file with :mod:`requests` and :mod:`requests_toolbelt`::
+
+        import pathlib
+        import requests
+        from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
+
+        # input file
+        path_to_upload = pathlib.Path("/path/to/file")
+        bucket_name = "circle-19082eua8sdj82"
+        object_name = "resources/18/39/01923102983
+        # obtain upload URL and credentials
+        psurl, fields = create_presigned_upload_url(bucket_name, object_name)
+        # callback function for monitoring the upload progress
+        monitor_callback = lambda mon: print(f"Bytes: {mon.bytes_read}")
+        # open the input file for streaming
+        with path_to_upload.open("rb") as fd:
+            fields["file"] = (fields["key"], fd)
+            e = MultipartEncoder(fields=fields)
+            m = MultipartEncoderMonitor(e, monitor_callback)
+            # Increase the read size to speed-up upload (the default chunk
+            # size for uploads in urllib is 8k which results in a lot of
+            # Python code being involved in uploading a 20GB file; Setting
+            # the chunk size to 4MB should increase the upload speed):
+            # https://github.com/requests/toolbelt/issues/75
+            # #issuecomment-237189952
+            m._read = m.read
+            m.read = lambda size: m._read(4 * 1024 * 1024)
+            # perform the actual upload
+            hrep = requests.post(
+                psurl,
+                data=m,
+                headers={'Content-Type': m.content_type},
+                verify=True,  # verify SSL connection
+                timeout=27.3,  # timeout to avoid freezing
+                )
+        if hrep.status_code != 204:
+            raise ValueError(
+                f"Upload failed with {hrep.status_code}: {hrep.reason}")
+    """
+    require_bucket(bucket_name)
+    s3_client, _, _ = get_s3()
+    response = s3_client.generate_presigned_post(bucket_name,
+                                                 object_name,
+                                                 ExpiresIn=expiration)
+    # The response contains the presigned URL and required fields
+    return response["url"], response["fields"]
+
+
 def create_presigned_url(bucket_name, object_name, expiration=3600,
                          filename=None):
     """Generate a presigned URL to share an S3 object

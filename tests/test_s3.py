@@ -1,15 +1,53 @@
+import base64
 import hashlib
 from unittest import mock
 import pathlib
 import uuid
 
+import botocore.exceptions
 import pytest
 import requests
+from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
 
 from dcor_shared import s3, sha256sum
 
 
 data_path = pathlib.Path(__file__).parent / "data"
+
+
+def upload_presigned_to_s3(psurl, fields, path_to_upload):
+    """Helper function for uploading data to S3
+
+    This is exactly how DCOR-Aid would be uploading things (with the
+    requests_toolbelt package). This could have been a little simpler,
+    but for the sake of reproducibility, we do it the DCOR-Aid way.
+    """
+    # callback function for monitoring the upload progress
+    # open the input file for streaming
+    with path_to_upload.open("rb") as fd:
+        fields["file"] = (fields["key"], fd)
+        e = MultipartEncoder(fields=fields)
+        m = MultipartEncoderMonitor(
+            e, lambda monitor: print(f"Bytes: {monitor.bytes_read}"))
+        # Increase the read size to speed-up upload (the default chunk
+        # size for uploads in urllib is 8k which results in a lot of
+        # Python code being involved in uploading a 20GB file; Setting
+        # the chunk size to 4MB should increase the upload speed):
+        # https://github.com/requests/toolbelt/issues/75
+        # #issuecomment-237189952
+        m._read = m.read
+        m.read = lambda size: m._read(4 * 1024 * 1024)
+        # perform the actual upload
+        hrep = requests.post(
+            psurl,
+            data=m,
+            headers={'Content-Type': m.content_type},
+            verify=True,  # verify SSL connection
+            timeout=27.3,  # timeout to avoid freezing
+        )
+    if hrep.status_code != 204:
+        raise ValueError(
+            f"Upload failed with {hrep.status_code}: {hrep.reason}")
 
 
 def test_compute_checksum():
@@ -176,6 +214,98 @@ def test_presigned_url_caching():
     for _ in range(3):
         urls2.append(s3.create_presigned_url(expiration=50, **kwargs))
     assert len(set(urls2)) == 1
+
+
+def test_presigned_upload():
+    path = data_path / "calibration_beads_47.rtdc"
+
+    # This is what would happen on the server when DCOR-Aid requests an
+    # upload URL
+    bucket_name = f"test-circle-{uuid.uuid4()}"
+    rid = str(uuid.uuid4())
+    object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
+    psurl, fields = s3.create_presigned_upload_url(bucket_name=bucket_name,
+                                                   object_name=object_name)
+
+    # This is what DCOR-Aid would do to upload the file
+    upload_presigned_to_s3(psurl=psurl,
+                           fields=fields,
+                           path_to_upload=path
+                           )
+
+    hash_exp = hashlib.sha256(path.read_bytes()).hexdigest()
+    hash_act = s3.compute_checksum(bucket_name=bucket_name,
+                                   object_name=object_name)
+    assert hash_exp == hash_act
+
+
+def test_presigned_upload_wrong_access():
+    path = data_path / "calibration_beads_47.rtdc"
+
+    # This is what would happen on the server when DCOR-Aid requests an
+    # upload URL
+    bucket_name = f"test-circle-{uuid.uuid4()}"
+    rid = str(uuid.uuid4())
+    object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
+    psurl, fields = s3.create_presigned_upload_url(bucket_name=bucket_name,
+                                                   object_name=object_name)
+    # Try to upload the file under a different object name
+    # (this tests the S3 access restrictions)
+    rid2 = str(uuid.uuid4())
+    object_name_bad = f"resource/{rid2[:3]}/{rid2[3:6]}/{rid2[6:]}"
+    # replace the old with the bad object name
+    new_policy = base64.b64encode(
+        base64.b64decode(fields["policy"])
+        .decode("utf-8")
+        .replace(object_name, object_name_bad)
+        .encode("utf-8")
+    )
+    # sanity check
+    assert new_policy != fields["policy"]
+    fields["policy"] = new_policy
+    fields["key"] = object_name_bad
+
+    with pytest.raises(ValueError, match="Upload failed with 403: Forbidden"):
+        # This is what DCOR-Aid would do to upload the file
+        upload_presigned_to_s3(psurl=psurl,
+                               fields=fields,
+                               path_to_upload=path
+                               )
+
+    with pytest.raises(botocore.exceptions.ClientError, match="Not Found"):
+        # Make sure the file does not exist
+        s3.compute_checksum(bucket_name=bucket_name,
+                            object_name=object_name_bad)
+
+
+def test_presigned_upload_wrong_key():
+    """Same as `test_presigned_upload_wrong_access` but no policy change"""
+    path = data_path / "calibration_beads_47.rtdc"
+
+    # This is what would happen on the server when DCOR-Aid requests an
+    # upload URL
+    bucket_name = f"test-circle-{uuid.uuid4()}"
+    rid = str(uuid.uuid4())
+    object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
+    psurl, fields = s3.create_presigned_upload_url(bucket_name=bucket_name,
+                                                   object_name=object_name)
+    # Try to upload the file under a different object name
+    # (this tests the S3 access restrictions)
+    rid2 = str(uuid.uuid4())
+    object_name_bad = f"resource/{rid2[:3]}/{rid2[3:6]}/{rid2[6:]}"
+    fields["key"] = object_name_bad
+
+    with pytest.raises(ValueError, match="Upload failed with 403: Forbidden"):
+        # This is what DCOR-Aid would do to upload the file
+        upload_presigned_to_s3(psurl=psurl,
+                               fields=fields,
+                               path_to_upload=path
+                               )
+
+    with pytest.raises(botocore.exceptions.ClientError, match="Not Found"):
+        # Make sure the file does not exist
+        s3.compute_checksum(bucket_name=bucket_name,
+                            object_name=object_name_bad)
 
 
 def test_upload_override(tmp_path):
