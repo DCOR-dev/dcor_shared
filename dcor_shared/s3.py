@@ -57,13 +57,21 @@ def create_presigned_upload_url(bucket_name, object_name,
     Returns
     -------
     psurl: str
-        Presigned upload URL as string
+        Presigned upload URL as string (HTTPS://{DOMAIN}/{BUCKET})
     fields: dict
         Dictionary for `data` to use during upload:
         - key: identical to `object_name`
         - AWSAccessKeyId: S3 access key name for authentication
         - policy: base64-encoded policy (expiration, conditions: bucket, key)
         - signature: signature created by the server to verify the request
+
+    Notes
+    -----
+    By default, due to the access design in DCOR, the S3 URL of the
+    uploaded resource `psurl/object_name` is private. If you would
+    like to make the resource publicly accessible, you can call
+    the method :func:`make_object_public`, which will add the `public=true`
+    tag to the object.
 
     Example
     -------

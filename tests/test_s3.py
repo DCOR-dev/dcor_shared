@@ -239,6 +239,39 @@ def test_presigned_upload():
     assert hash_exp == hash_act
 
 
+def test_presigned_upload_private_by_default():
+    """The presigend upload should be private by default"""
+    path = data_path / "calibration_beads_47.rtdc"
+
+    # This is what would happen on the server when DCOR-Aid requests an
+    # upload URL
+    bucket_name = f"test-circle-{uuid.uuid4()}"
+    rid = str(uuid.uuid4())
+    object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
+    psurl, fields = s3.create_presigned_upload_url(bucket_name=bucket_name,
+                                                   object_name=object_name)
+
+    # This is what DCOR-Aid would do to upload the file
+    upload_presigned_to_s3(psurl=psurl,
+                           fields=fields,
+                           path_to_upload=path
+                           )
+
+    s3_url = "/".join([psurl, fields["key"]])
+
+    # attempt to download the data
+    response = requests.get(s3_url)
+    assert not response.ok
+
+    # make the resource public
+    s3.make_object_public(object_name=object_name,
+                          bucket_name=bucket_name)
+
+    # now it should work
+    response = requests.get(s3_url)
+    assert response.ok
+
+
 def test_presigned_upload_wrong_access():
     path = data_path / "calibration_beads_47.rtdc"
 
