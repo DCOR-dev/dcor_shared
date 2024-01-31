@@ -1,3 +1,5 @@
+0.7.2
+ - tests: fix invalid make_dataset method
 0.7.1
  - fix: handle non-existent bucket when S3 object is missing
  - docs: be more verbose in s3cc docstrings

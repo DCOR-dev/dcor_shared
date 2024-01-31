@@ -35,7 +35,7 @@ def create_with_upload_no_temp(clean_db, ckan_config, monkeypatch):
 
 
 def make_dataset(create_context, owner_org, create_with_upload=None,
-                 activate=False, **kwargs):
+                 resource_path=None, activate=False, **kwargs):
     if "title" not in kwargs:
         kwargs["title"] = "test-dataset"
     if "authors" not in kwargs:
@@ -52,7 +52,10 @@ def make_dataset(create_context, owner_org, create_with_upload=None,
                              )
 
     if create_with_upload is not None:
-        rs = make_resource(create_with_upload, create_context, ds["id"])
+        rs = make_resource(resource_path=resource_path,
+                           create_with_upload=create_with_upload,
+                           create_context=create_context,
+                           dataset_id=ds["id"])
 
     if activate:
         helpers.call_action("package_patch", create_context,
