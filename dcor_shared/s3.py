@@ -256,7 +256,8 @@ def make_object_public(bucket_name, object_name, missing_ok=False):
         response = s3_client.get_object_tagging(
             Bucket=bucket_name,
             Key=object_name)
-    except s3_client.exceptions.NoSuchKey:
+    except (s3_client.exceptions.NoSuchBucket,
+            s3_client.exceptions.NoSuchKey):
         if not missing_ok:
             raise
     else:
