@@ -1,3 +1,5 @@
+0.7.1
+ - docs: be more verbose in s3cc docstrings
 0.7.0
  - feat: implement `s3.create_presigned_upload_url` for creating presigned
    upload URLs that DCOR-Aid can use to upload resources directly to S3
