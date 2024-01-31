@@ -1,3 +1,4 @@
+"""Basic S3 utility functions"""
 import functools
 import hashlib
 import json

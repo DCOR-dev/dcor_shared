@@ -68,11 +68,11 @@ def wait_for_resource(resource_id: str,
                                           'user': 'default'},
                                  data_dict={"id": resource_id})
 
-        s3_url = res_dict.get("s3_url", None)
+        s3_ok = res_dict.get("s3_available", None)
         if time.time() - t0 > timeout:
             raise OSError("Data import seems to take too long "
                           "for '{}'!".format(path))
-        elif s3_url is not None:
+        elif s3_ok is not None:
             # If the dataset is on S3, it is considered to be available.
             break
         elif not path.exists():

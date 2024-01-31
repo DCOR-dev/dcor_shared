@@ -42,7 +42,14 @@ setup(
     license="AGPLv3+",
     description=description,
     long_description=open('README.rst').read() if exists('README.rst') else '',
-    install_requires=["boto3"],
+    install_requires=[
+        "boto3",
+        "dclab[s3]>=0.57.3",
+    ],
+    extras_require={
+        # Required for the `dcor_shared.testing` submodule
+        "tests": ["requests", "requests_toolbelt", "pytest"]
+    },
     python_requires='>=3.6, <4',
     keywords=["DCOR"],
     classifiers=[

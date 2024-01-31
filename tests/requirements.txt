@@ -1,2 +1,4 @@
 pytest
+requests
 requests_toolbelt
+dclab[s3]

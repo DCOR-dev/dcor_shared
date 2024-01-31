@@ -21,7 +21,7 @@ def test_wait_for_resource_s3(monkeypatch):
     monkeypatch.setattr(logic, "get_action",
                         lambda x: lambda context, data_dict: {
                             "id": res_id,
-                            "s3_url": "https://bucket.name/object"})
+                            "s3_available": True})
     # Should not raise an exception
     wait_for_resource(res_id)
 
