@@ -1,3 +1,5 @@
+0.7.3
+ - enh: add get_dc_instance convenience method
 0.7.2
  - tests: fix invalid make_dataset method
 0.7.1
