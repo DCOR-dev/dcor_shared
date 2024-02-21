@@ -1,3 +1,6 @@
+0.7.4
+ - fix: disable basins when loading a dataset instance
+ - enh: implement s3cc.upload_artifact
 0.7.3
  - enh: add get_dc_instance convenience method
 0.7.2

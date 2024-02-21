@@ -3,14 +3,30 @@
 Contains methods to directly interact with CKAN resources that are on S3
 via just the resource ID.
 """
+from __future__ import annotations
 import functools
-
+import pathlib
 from typing import Literal
+import warnings
 
 from dclab.rtdc_dataset import fmt_s3
 
 from .ckan import get_ckan_config_option
+from .data import sha256sum
 from . import s3
+
+
+def artifact_exists(
+        resource_id: str,
+        artifact: Literal["condensed", "preview", "resource"] = "resource"):
+    """Check whether an artifact is available on S3
+
+    The resource with the identifier `resource_id` must exist in the
+    CKAN database.
+    """
+    bucket_name, object_name = get_s3_bucket_object_for_artifact(
+        resource_id=resource_id, artifact=artifact)
+    return s3.object_exists(bucket_name=bucket_name, object_name=object_name)
 
 
 def compute_checksum(resource_id):
@@ -91,6 +107,9 @@ def get_s3_dc_handle(resource_id):
             "dcor_object_store.access_key_id"),
         secret_key=get_ckan_config_option(
             "dcor_object_store.secret_access_key"),
+        # Disable basins, because they could point to files on the
+        # local file system (security).
+        enable_basins=False,
     )
     return ds
 
@@ -130,11 +149,64 @@ def make_resource_public(resource_id: str,
 def object_exists(
         resource_id: str,
         artifact: Literal["condensed", "preview", "resource"] = "resource"):
-    """Check whether an object is available on S3
+    """Check whether an artifact is available on S3
 
     The resource with the identifier `resource_id` must exist in the
     CKAN database.
     """
+    warnings.warn("`s3cc.object_exists` is deprecated, please use"
+                  "`s3cc.artifact_exists` instead",
+                  DeprecationWarning)
+    return artifact_exists(resource_id, artifact)
+
+
+def upload_artifact(
+        resource_id: str,
+        path_artifact: str | pathlib.Path,
+        artifact: Literal["condensed", "preview", "resource"] = "resource",
+        sha256: str = None,
+        private: bool = None,
+        override: bool = False
+):
+    """Upload an artifact to S3
+
+    Parameters
+    ----------
+    resource_id: str
+        The resource identifier for the artifact
+    path_artifact: pathlib.Path
+        The path to the artifact file
+    artifact: str
+        The artifact type that the file represents
+    sha256: str
+        The SHA256 sum of `path_artifcat`, will be computed if not provided
+    private: bool
+        Whether the dataset that the resource belongs to is private.
+        Leave this blank if you don't know and we will do a database
+        look-up to determine the correct value.
+    override: bool
+        Whether to override a possibly existing object on S3.
+    """
     bucket_name, object_name = get_s3_bucket_object_for_artifact(
         resource_id=resource_id, artifact=artifact)
-    return s3.object_exists(bucket_name=bucket_name, object_name=object_name)
+
+    if private is None:
+        # User did not say whether the resource is private. We have to
+        # find out ourselves.
+        import ckan.logic
+        res_dict = ckan.logic.get_action('resource_show')(
+            context={'ignore_auth': True, 'user': 'default'},
+            data_dict={"id": resource_id})
+        ds_dict = ckan.logic.get_action('package_show')(
+            context={'ignore_auth': True, 'user': 'default'},
+            data_dict={'id': res_dict["package_id"]})
+        private = ds_dict["private"]
+
+    rid = resource_id
+    s3.upload_file(
+        bucket_name=bucket_name,
+        object_name=f"{artifact}/{rid[:3]}/{rid[3:6]}/{rid[6:]}",
+        path=path_artifact,
+        sha256=sha256 or sha256sum(path_artifact),
+        private=private,
+        override=override)

@@ -16,6 +16,23 @@ import requests
 data_path = pathlib.Path(__file__).parent / "data"
 
 
+@pytest.mark.ckan_config('ckan.plugins', 'dcor_schemas')
+@pytest.mark.usefixtures('clean_db', 'with_request_context')
+@mock.patch('ckan.plugins.toolkit.enqueue_job',
+            side_effect=synchronous_enqueue_job)
+def test_artifact_exists(enqueue_job_mock):
+    rid, s3_url, _, org_dict = setup_s3_resource_on_ckan(private=True)
+    assert s3cc.artifact_exists(rid)
+    # Delete the object
+    s3_client, _, _ = s3.get_s3()
+    bucket_name, object_name = s3cc.get_s3_bucket_object_for_artifact(rid)
+    s3_client.delete_object(
+        Bucket=bucket_name,
+        Key=object_name
+    )
+    assert not s3cc.artifact_exists(rid)
+
+
 def setup_s3_resource_on_ckan(private=False):
     """Create an S3 resource in CKAN"""
     user = factories.User()
@@ -151,14 +168,38 @@ def test_make_resource_public(enqueue_job_mock):
 @pytest.mark.usefixtures('clean_db', 'with_request_context')
 @mock.patch('ckan.plugins.toolkit.enqueue_job',
             side_effect=synchronous_enqueue_job)
-def test_object_exists(enqueue_job_mock):
+def test_upload_artifact(enqueue_job_mock, tmp_path):
     rid, s3_url, _, org_dict = setup_s3_resource_on_ckan(private=True)
-    assert s3cc.object_exists(rid)
-    # Delete the object
-    s3_client, _, _ = s3.get_s3()
-    bucket_name, object_name = s3cc.get_s3_bucket_object_for_artifact(rid)
-    s3_client.delete_object(
-        Bucket=bucket_name,
-        Key=object_name
-    )
-    assert not s3cc.object_exists(rid)
+    path_fake_preview = tmp_path / "test_preview.jpg"
+    path_fake_preview.write_text("This is not a real image!")
+    # upload the preview
+    s3cc.upload_artifact(rid,
+                         path_artifact=path_fake_preview,
+                         artifact="preview")
+    # make sure that worked
+    assert s3cc.artifact_exists(rid, "preview")
+    # attempt to download the private artifact
+    resp1 = requests.get(s3_url.replace("resource", "preview"))
+    assert not resp1.ok, "sanity check"
+
+
+@pytest.mark.ckan_config('ckan.plugins', 'dcor_schemas')
+@pytest.mark.usefixtures('clean_db', 'with_request_context')
+@mock.patch('ckan.plugins.toolkit.enqueue_job',
+            side_effect=synchronous_enqueue_job)
+def test_upload_artifact_public(enqueue_job_mock, tmp_path):
+    rid, s3_url, _, org_dict = setup_s3_resource_on_ckan(private=True)
+    path_fake_preview = tmp_path / "test_preview.jpg"
+    path_fake_preview.write_text("This is not a real image!")
+    # upload the preview
+    s3cc.upload_artifact(rid,
+                         path_artifact=path_fake_preview,
+                         artifact="preview",
+                         # force public resource even though dataset is not
+                         # (this has no real-life use case)
+                         private=False)
+    # make sure that worked
+    assert s3cc.artifact_exists(rid, "preview")
+    # attempt to download the private artifact
+    resp1 = requests.get(s3_url.replace("resource", "preview"))
+    assert resp1.ok, "preview should be public"
