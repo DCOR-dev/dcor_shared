@@ -203,10 +203,11 @@ def upload_artifact(
         private = ds_dict["private"]
 
     rid = resource_id
-    s3.upload_file(
+    s3_url = s3.upload_file(
         bucket_name=bucket_name,
         object_name=f"{artifact}/{rid[:3]}/{rid[3:6]}/{rid[6:]}",
         path=path_artifact,
         sha256=sha256 or sha256sum(path_artifact),
         private=private,
         override=override)
+    return s3_url

@@ -173,9 +173,10 @@ def test_upload_artifact(enqueue_job_mock, tmp_path):
     path_fake_preview = tmp_path / "test_preview.jpg"
     path_fake_preview.write_text("This is not a real image!")
     # upload the preview
-    s3cc.upload_artifact(rid,
-                         path_artifact=path_fake_preview,
-                         artifact="preview")
+    s3_url2 = s3cc.upload_artifact(rid,
+                                   path_artifact=path_fake_preview,
+                                   artifact="preview")
+    assert s3_url == s3_url2.replace("preview", "resource")
     # make sure that worked
     assert s3cc.artifact_exists(rid, "preview")
     # attempt to download the private artifact
