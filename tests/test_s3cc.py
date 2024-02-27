@@ -1,4 +1,5 @@
 import pathlib
+import shutil
 from unittest import mock
 
 import pytest
@@ -6,34 +7,21 @@ import pytest
 from ckan import model
 import ckan.tests.helpers as helpers
 import ckan.tests.factories as factories
+import ckanext.dcor_schemas.plugin
 
-from dcor_shared.testing import synchronous_enqueue_job, upload_presigned_to_s3
+from dcor_shared.testing import (
+    make_dataset, synchronous_enqueue_job, upload_presigned_to_s3
+)
 from dcor_shared import s3, s3cc, sha256sum
 
+import h5py
 import requests
 
 
 data_path = pathlib.Path(__file__).parent / "data"
 
 
-@pytest.mark.ckan_config('ckan.plugins', 'dcor_schemas')
-@pytest.mark.usefixtures('clean_db', 'with_request_context')
-@mock.patch('ckan.plugins.toolkit.enqueue_job',
-            side_effect=synchronous_enqueue_job)
-def test_artifact_exists(enqueue_job_mock):
-    rid, s3_url, _, org_dict = setup_s3_resource_on_ckan(private=True)
-    assert s3cc.artifact_exists(rid)
-    # Delete the object
-    s3_client, _, _ = s3.get_s3()
-    bucket_name, object_name = s3cc.get_s3_bucket_object_for_artifact(rid)
-    s3_client.delete_object(
-        Bucket=bucket_name,
-        Key=object_name
-    )
-    assert not s3cc.artifact_exists(rid)
-
-
-def setup_s3_resource_on_ckan(private=False):
+def setup_s3_resource_on_ckan(private=False, resource_path=None):
     """Create an S3 resource in CKAN"""
     user = factories.User()
     owner_org = factories.Organization(users=[{
@@ -51,10 +39,13 @@ def setup_s3_resource_on_ckan(private=False):
                                    organization_id=owner_org["id"],
                                    )
     rid = response["resource_id"]
+    if resource_path is None:
+        resource_path = data_path / "calibration_beads_47.rtdc"
+
     upload_presigned_to_s3(
         psurl=response["url"],
         fields=response["fields"],
-        path_to_upload=data_path / "calibration_beads_47.rtdc")
+        path_to_upload=resource_path)
 
     # Create the dataset
     pkg_dict = helpers.call_action("package_create",
@@ -80,6 +71,23 @@ def setup_s3_resource_on_ckan(private=False):
     assert new_pkg_dict["package"]["num_resources"] == 1
     s3_url = response["url"] + "/" + response["fields"]["key"]
     return rid, s3_url, new_pkg_dict, owner_org
+
+
+@pytest.mark.ckan_config('ckan.plugins', 'dcor_schemas')
+@pytest.mark.usefixtures('clean_db', 'with_request_context')
+@mock.patch('ckan.plugins.toolkit.enqueue_job',
+            side_effect=synchronous_enqueue_job)
+def test_artifact_exists(enqueue_job_mock):
+    rid, s3_url, _, org_dict = setup_s3_resource_on_ckan(private=True)
+    assert s3cc.artifact_exists(rid)
+    # Delete the object
+    s3_client, _, _ = s3.get_s3()
+    bucket_name, object_name = s3cc.get_s3_bucket_object_for_artifact(rid)
+    s3_client.delete_object(
+        Bucket=bucket_name,
+        Key=object_name
+    )
+    assert not s3cc.artifact_exists(rid)
 
 
 @pytest.mark.ckan_config('ckan.plugins', 'dcor_schemas')
@@ -132,6 +140,44 @@ def test_get_s3_handle(enqueue_job_mock):
     rid, _, _, _ = setup_s3_resource_on_ckan()
     with s3cc.get_s3_dc_handle(rid) as ds:
         assert len(ds) == 47
+
+
+@pytest.mark.ckan_config('ckan.plugins', 'dcor_depot dcor_schemas dc_serve')
+@pytest.mark.usefixtures('clean_db', 'with_request_context')
+@mock.patch('ckan.plugins.toolkit.enqueue_job',
+            side_effect=synchronous_enqueue_job)
+def test_get_s3_dc_handle_basin_based(enqueue_job_mock, create_with_upload,
+                                      monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        ckanext.dcor_schemas.plugin,
+        'DISABLE_AFTER_DATASET_CREATE_FOR_CONCURRENT_JOB_TESTS',
+        True)
+
+    resource_path = tmp_path / "data.rtdc"
+    shutil.copy2(data_path / "calibration_beads_47.rtdc", resource_path)
+    with h5py.File(resource_path, "a") as h5:
+        del h5["events/volume"]
+
+    _, res_dict = make_dataset(
+        create_with_upload=create_with_upload,
+        resource_path=resource_path,
+        activate=True)
+    rid = res_dict["id"]
+
+    # sanity check with reference
+    with s3cc.get_s3_dc_handle(rid) as ds:
+        assert "volume" not in ds.features_innate
+        assert "image" in ds
+
+    # actual test, the condensed dataset containing "volume" should be
+    # in one of the basins.
+    with s3cc.get_s3_dc_handle_basin_based(rid) as ds2:
+        assert len(ds2.basins) == 2
+        assert "volume" in ds2
+        assert "volume" in ds2.features_basin
+        assert "volume" not in ds2.features_innate
+        assert "image" in ds2
+        assert len(ds2) == 47
 
 
 @pytest.mark.ckan_config('ckan.plugins', 'dcor_schemas')

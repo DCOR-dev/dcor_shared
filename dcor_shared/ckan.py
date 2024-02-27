@@ -41,7 +41,43 @@ def get_ckan_webassets_path():
     return pathlib.Path(get_ckan_config_option("ckan.webassets.path"))
 
 
-def get_resource_path(rid, create_dirs=False):
+def get_resource_dc_config(resource_id):
+    """Return the DC metadata for a resource identifier
+
+    For this to work, the dcor_schemas CKAN extension must be active.
+    """
+    _, res_dict = get_resource_info(resource_id)
+    # build metadata dictionary from resource metadata
+    meta = {}
+    for item in res_dict:
+        if item.startswith("dc:"):
+            _, sec, key = item.split(":", 2)
+            meta.setdefault(sec, {})
+            meta[sec][key] = res_dict[item]
+    return meta
+
+
+def get_resource_info(resource_id):
+    """Return resource and dataset dictionaries for a resource identifier
+
+    Return the dataset dictionary and the resource dictionary.
+    """
+    from ckan import logic
+    res_dict = logic.get_action("resource_show")(
+        context={'ignore_auth': True, 'user': 'default'},
+        data_dict={"id": resource_id})
+    ds_dict = logic.get_action("package_show")(
+        context={'ignore_auth': True, 'user': 'default'},
+        data_dict={"id": res_dict["package_id"]})
+    return ds_dict, res_dict
+
+
+def get_resource_path(resource_id, create_dirs=False):
+    """Return the expected local path for a resource identifier
+
+    If `create_dirs` is True, create the parent directory tree.
+    """
+    rid = resource_id
     resources_path = get_ckan_storage_path() / "resources"
     pdir = resources_path / rid[:3] / rid[3:6]
     path = pdir / rid[6:]

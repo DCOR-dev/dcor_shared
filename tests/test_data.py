@@ -29,19 +29,11 @@ def test_get_dc_instance_file(enqueue_job_mock, create_with_upload,
         'DISABLE_AFTER_DATASET_CREATE_FOR_CONCURRENT_JOB_TESTS',
         True)
 
-    user = factories.User()
-    owner_org = factories.Organization(users=[{
-        'name': user['id'],
-        'capacity': 'admin'
-    }])
-    create_context = {'ignore_auth': False,
-                      'user': user['name'],
-                      'api_version': 3}
     ds_dict, _ = make_dataset(
-        create_context, owner_org,
         create_with_upload=create_with_upload,
         resource_path=data_path / "calibration_beads_47.rtdc",
         activate=True)
+
     rid = ds_dict["resources"][0]["id"]
     resource_path = pathlib.Path(get_resource_path(rid))
     assert resource_path.exists(), "sanity check"
@@ -75,19 +67,11 @@ def test_get_dc_instance_s3(enqueue_job_mock, create_with_upload,
         'DISABLE_AFTER_DATASET_CREATE_FOR_CONCURRENT_JOB_TESTS',
         True)
 
-    user = factories.User()
-    owner_org = factories.Organization(users=[{
-        'name': user['id'],
-        'capacity': 'admin'
-    }])
-    create_context = {'ignore_auth': False,
-                      'user': user['name'],
-                      'api_version': 3}
     ds_dict, _ = make_dataset(
-        create_context, owner_org,
         create_with_upload=create_with_upload,
         resource_path=data_path / "calibration_beads_47.rtdc",
         activate=True)
+
     res_dict = ds_dict["resources"][0]
     rid = res_dict["id"]
     resource_path = pathlib.Path(get_resource_path(rid))

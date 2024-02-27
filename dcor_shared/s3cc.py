@@ -4,14 +4,20 @@ Contains methods to directly interact with CKAN resources that are on S3
 via just the resource ID.
 """
 from __future__ import annotations
+import io
 import functools
 import pathlib
 from typing import Literal
+from urllib.parse import urlparse
 import warnings
 
-from dclab.rtdc_dataset import fmt_s3
+import dclab
+from dclab.rtdc_dataset import fmt_hdf5, fmt_s3
+import h5py
 
-from .ckan import get_ckan_config_option
+from .ckan import (
+    get_ckan_config_option, get_resource_dc_config, get_resource_info
+)
 from .data import sha256sum
 from . import s3
 
@@ -81,13 +87,7 @@ def get_s3_bucket_name_for_resource(resource_id):
     The resource with the identifier `resource_id` must exist in the
     CKAN database.
     """
-    import ckan.logic
-    res_dict = ckan.logic.get_action('resource_show')(
-        context={'ignore_auth': True, 'user': 'default'},
-        data_dict={"id": resource_id})
-    ds_dict = ckan.logic.get_action('package_show')(
-        context={'ignore_auth': True, 'user': 'default'},
-        data_dict={'id': res_dict["package_id"]})
+    ds_dict, _ = get_resource_info(resource_id)
     bucket_name = get_ckan_config_option(
         "dcor_object_store.bucket_name").format(
         organization_id=ds_dict["organization"]["id"])
@@ -96,6 +96,9 @@ def get_s3_bucket_name_for_resource(resource_id):
 
 def get_s3_dc_handle(resource_id):
     """Return an instance of :class:`RTDC_S3`
+
+    The data are accessed directly via S3 using DCOR's access credentials.
+    Use this if you need to access the original raw file.
 
     The resource with the identifier `resource_id` must exist in the
     CKAN database.
@@ -112,6 +115,48 @@ def get_s3_dc_handle(resource_id):
         enable_basins=False,
     )
     return ds
+
+
+def get_s3_dc_handle_basin_based(resource_id):
+    """Return a :class:`RTDC_HTTP`-basin-backed instance of :class:`RTDC_HDF5`
+
+    The returned instance does not contain any feature data, but has
+    basins defined that link to the original data on S3. The upside
+    over :func:`get_s3_dc_handle` is that the returned dataset
+    includes the basin with the condensed data and that the returned
+    instance does not contain the DCOR S3 credentials. The downside is
+    that initialization takes slightly longer and that, if private
+    resources are accessed, the presigned URLs in the basins are only
+    valid for a fixed time period.
+    """
+    ds_dict, res_dict = get_resource_info(resource_id)
+    basin_paths = []
+    for artifact in ["resource", "condensed"]:
+        if ds_dict["private"]:
+            bp = create_presigned_url(resource_id, artifact=artifact)
+        else:
+            bp = get_s3_url_for_artifact(resource_id, artifact=artifact)
+        basin_paths.append(bp)
+
+    fd = io.BytesIO()
+    with h5py.File(fd, "w", libver="latest") as hv:
+        # We don't use RTDCWriter as a context manager to avoid overhead
+        # during __exit__, but then we have to make sure "events" is there.
+        hv.require_group("events")
+        hw = dclab.RTDCWriter(hv)
+        hw.store_metadata(get_resource_dc_config(resource_id))
+        for bp in basin_paths:
+            urlp = urlparse(bp)  # e.g. http://localhost/bucket/resource/id
+            hw.store_basin(
+                basin_name=urlp.path.split("/")[2],  # e.g. "resource"
+                basin_format="http",
+                basin_type="remote",
+                basin_locs=[bp],
+                # Don't verify anything. This would only cost time,
+                # and we know these objects exist.
+                verify=False,
+                )
+    return fmt_hdf5.RTDC_HDF5(fd)
 
 
 def get_s3_url_for_artifact(
@@ -193,13 +238,7 @@ def upload_artifact(
     if private is None:
         # User did not say whether the resource is private. We have to
         # find out ourselves.
-        import ckan.logic
-        res_dict = ckan.logic.get_action('resource_show')(
-            context={'ignore_auth': True, 'user': 'default'},
-            data_dict={"id": resource_id})
-        ds_dict = ckan.logic.get_action('package_show')(
-            context={'ignore_auth': True, 'user': 'default'},
-            data_dict={'id': res_dict["package_id"]})
+        ds_dict, _ = get_resource_info(resource_id)
         private = ds_dict["private"]
 
     rid = resource_id

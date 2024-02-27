@@ -1,5 +1,7 @@
 from io import BytesIO
 
+import ckan.authz
+import ckan.tests.factories as factories
 import ckan.tests.helpers as helpers
 from ckan.tests.pytest_ckan.fixtures import FakeFileStorage
 import requests
@@ -34,8 +36,25 @@ def create_with_upload_no_temp(clean_db, ckan_config, monkeypatch):
     return factory
 
 
-def make_dataset(create_context, owner_org, create_with_upload=None,
+def make_dataset(create_context=None, owner_org=None, create_with_upload=None,
                  resource_path=None, activate=False, **kwargs):
+    """Create a dataset with a resource for testing"""
+    if create_context is None:
+        user = factories.User()
+        create_context = {'ignore_auth': False,
+                          'user': user['name'],
+                          'api_version': 3}
+        user_id = user["id"]
+    else:
+        # get user ID from create_context
+        user_id = ckan.authz.get_user_id_for_username(create_context["user"])
+
+    if owner_org is None:
+        owner_org = factories.Organization(users=[{
+            'name': user_id,
+            'capacity': 'admin'
+        }])
+
     if "title" not in kwargs:
         kwargs["title"] = "test-dataset"
     if "authors" not in kwargs:
@@ -90,7 +109,6 @@ def synchronous_enqueue_job(job_func, args=None, kwargs=None, title=None,
                             queue=None, rq_kwargs=None):
     """
     Synchronous mock for ``ckan.plugins.toolkit.enqueue_job``.
-
 
     Due to the asynchronous nature of background jobs, code that uses them
     needs to be handled specially when writing tests.
