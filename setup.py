@@ -44,7 +44,7 @@ setup(
     long_description=open('README.rst').read() if exists('README.rst') else '',
     install_requires=[
         "boto3",
-        "dclab[s3]>=0.57.3",
+        "dclab[s3]>=0.57.5",
     ],
     extras_require={
         # Required for the `dcor_shared.testing` submodule
