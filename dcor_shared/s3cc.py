@@ -18,7 +18,7 @@ import h5py
 from .ckan import (
     get_ckan_config_option, get_resource_dc_config, get_resource_info
 )
-from .data import sha256sum
+
 from . import s3
 
 
@@ -246,7 +246,7 @@ def upload_artifact(
         bucket_name=bucket_name,
         object_name=f"{artifact}/{rid[:3]}/{rid[3:6]}/{rid[6:]}",
         path=path_artifact,
-        sha256=sha256 or sha256sum(path_artifact),
+        sha256=sha256,
         private=private,
         override=override)
     return s3_url

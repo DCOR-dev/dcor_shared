@@ -10,6 +10,7 @@ import boto3
 import botocore.exceptions
 
 from .ckan import get_ckan_config_option
+from .data import sha256sum
 
 
 def compute_checksum(bucket_name, object_name, max_size=None):
@@ -367,7 +368,7 @@ def require_bucket(bucket_name):
     return s3_bucket
 
 
-def upload_file(bucket_name, object_name, path, sha256, private=True,
+def upload_file(bucket_name, object_name, path, sha256=None, private=True,
                 override=False):
     """Upload a file to a bucket
 
@@ -380,7 +381,8 @@ def upload_file(bucket_name, object_name, path, sha256, private=True,
     path: str or pathlib.Path
         Local path of the file to be uploaded
     sha256: str
-        SHA256 checksum of the file to be uploaded
+        SHA256 checksum of the file to be uploaded, will be computed
+        if not provided
     private: bool
         Whether the object should remain private. If set to False,
         a tag "public:true" is added to the object which is picket up
@@ -393,6 +395,9 @@ def upload_file(bucket_name, object_name, path, sha256, private=True,
     s3_url: str
         URL to the S3 object
     """
+    if not sha256:
+        sha256 = sha256sum(path)
+
     path_size = pathlib.Path(path).stat().st_size
     s3_client, _, _ = get_s3()
     s3_bucket = require_bucket(bucket_name)
