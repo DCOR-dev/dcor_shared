@@ -47,7 +47,8 @@ def make_dataset(create_context=None, owner_org=None, create_with_upload=None,
         user_id = user["id"]
     else:
         # get user ID from create_context
-        user_id = ckan.authz.get_user_id_for_username(create_context["user"])
+        user_id = ckan.authz.get_user_id_for_username(
+            create_context["user"], allow_none=True)
 
     if owner_org is None:
         owner_org = factories.Organization(users=[{
