@@ -1,4 +1,10 @@
+from __future__ import annotations
+
 from io import BytesIO
+import numbers
+import pathlib
+from typing import Dict
+import uuid
 
 import ckan.authz
 import ckan.tests.factories as factories
@@ -8,6 +14,9 @@ import requests
 from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
 
 import pytest
+
+from .ckan import get_ckan_config_option
+from . import s3
 
 
 @pytest.fixture
@@ -78,15 +87,101 @@ def make_dataset(create_context=None, owner_org=None, create_with_upload=None,
                            dataset_id=ds["id"])
 
     if activate:
-        helpers.call_action("package_patch", create_context,
-                            id=ds["id"],
-                            state="active")
+        revise_dict = {
+            "match": {"id": ds["id"]},
+            "update": {"state": "active"}
+        }
+        helpers.call_action("package_revise", create_context, **revise_dict)
 
     ds_dict = helpers.call_action("package_show", id=ds["id"])
 
     if create_with_upload is not None:
         # updated resource dictionary
         rs_dict = helpers.call_action("resource_show", id=rs["id"])
+        return ds_dict, rs_dict
+    else:
+        return ds_dict
+
+
+def make_dataset_via_s3(
+        create_context: Dict | None = None,
+        owner_org: Dict | None = None,
+        resource_path: str | pathlib.Path | None = None,
+        activate: bool = False,
+        **kwargs: str | numbers.Number):
+    """Create a dataset and upload the given resource directly via S3
+
+    For this action to work, the "ckanext-dcor_schemas" extension
+    must be loaded.
+
+    Parameters
+    ----------
+    create_context: dict
+        CKAN context for creating the dataset
+    owner_org: dict
+        CKAN dictionary of the owner organization
+    resource_path: str or pathlib.Path
+        path to the resource file to upload. If not specified, then
+        not resource is created for the dataset
+    activate: bool
+        whether to activate the dataset
+    kwargs: dict
+        keyword arguments passed to `package_create`
+    """
+    if create_context is None:
+        user = factories.User()
+        create_context = {'ignore_auth': False,
+                          'user': user['name'],
+                          'api_version': 3}
+        user_id = user["id"]
+    else:
+        # get user ID from create_context
+        user_id = ckan.authz.get_user_id_for_username(
+            create_context["user"], allow_none=True)
+
+    if owner_org is None:
+        owner_org = factories.Organization(users=[{
+            'name': user_id,
+            'capacity': 'admin'
+        }])
+
+    if "title" not in kwargs:
+        kwargs["title"] = "test-dataset-S3"
+    if "authors" not in kwargs:
+        kwargs["authors"] = "Peter Fly Pan"
+    if "license_id" not in kwargs:
+        kwargs["license_id"] = "CC-BY-4.0"
+    assert "state" not in kwargs, "must not be set"
+    assert "owner_org" not in kwargs, "must not be set"
+    # create a dataset
+    ds_dict = helpers.call_action("package_create", create_context,
+                                  owner_org=owner_org["name"],
+                                  state="draft",
+                                  **kwargs
+                                  )
+
+    if resource_path is not None:
+        rid = make_resource_via_s3(resource_path=resource_path,
+                                   organization_id=owner_org["id"],
+                                   dataset_id=ds_dict["id"],
+                                   create_context=create_context,
+                                   private=ds_dict.get("private", False)
+                                   )
+    else:
+        rid = None
+
+    if activate:
+        revise_dict = {
+            "match": {"id": ds_dict["id"]},
+            "update": {"state": "active"}
+        }
+        helpers.call_action("package_revise", create_context, **revise_dict)
+
+    ds_dict = helpers.call_action("package_show", id=ds_dict["id"])
+
+    if rid is not None:
+        # fetch resource dictionary
+        rs_dict = helpers.call_action("resource_show", id=rid)
         return ds_dict, rs_dict
     else:
         return ds_dict
@@ -104,6 +199,33 @@ def make_resource(resource_path, create_with_upload, create_context,
     )
     resource = helpers.call_action("resource_show", id=rs["id"])
     return resource
+
+
+def make_resource_via_s3(resource_path, organization_id, dataset_id,
+                         create_context, private=False):
+    """Upload a resource to S3 and register it with CKAN"""
+    bucket_name = get_ckan_config_option(
+        "dcor_object_store.bucket_name").format(
+        organization_id=organization_id)
+    rid = str(uuid.uuid4())
+    object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
+
+    s3.upload_file(bucket_name=bucket_name,
+                   object_name=object_name,
+                   path=resource_path,
+                   private=private)
+
+    revise_dict = {
+        "match": {"id": dataset_id},
+        "update": {"resources": [{"id": rid,
+                                  "name": resource_path.name,
+                                  "s3_available": True,
+                                  }
+                                 ]
+                   }
+        }
+    helpers.call_action("package_revise", create_context, **revise_dict)
+    return rid
 
 
 def synchronous_enqueue_job(job_func, args=None, kwargs=None, title=None,
