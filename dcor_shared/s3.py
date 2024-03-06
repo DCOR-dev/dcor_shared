@@ -1,4 +1,6 @@
 """Basic S3 utility functions"""
+from __future__ import annotations
+
 import functools
 import hashlib
 import json
@@ -125,8 +127,11 @@ def create_presigned_upload_url(bucket_name, object_name,
     return response["url"], response["fields"]
 
 
-def create_presigned_url(bucket_name, object_name, expiration=3600,
-                         filename=None):
+def create_presigned_url(
+        bucket_name: str,
+        object_name: str,
+        expiration: int = 3600,
+        filename: str | None = None):
     """Generate a presigned URL to share an S3 object
 
     Parameters
@@ -165,8 +170,11 @@ def create_presigned_url(bucket_name, object_name, expiration=3600,
 
 
 @functools.lru_cache()
-def create_presigned_url_until(bucket_name, object_name, expires_at,
-                               filename=None):
+def create_presigned_url_until(
+        bucket_name: str,
+        object_name: str,
+        expires_at: int,
+        filename: str | None = None) -> str:
     """Cached `create_presigned_url` with expiry time point
 
     Parameters
@@ -183,7 +191,7 @@ def create_presigned_url_until(bucket_name, object_name, expires_at,
 
     Returns
     -------
-    psurl: str
+    ps_url: str
         Presigned URL as string.
     """
     # Generate a presigned URL for the S3 object
@@ -193,12 +201,12 @@ def create_presigned_url_until(bucket_name, object_name, expires_at,
     if filename is not None:
         params["ResponseContentDisposition"] = \
             f"attachment; filename = {filename}"
-    psurl = s3_client.generate_presigned_url(
+    ps_url = s3_client.generate_presigned_url(
         'get_object',
         Params=params,
         ExpiresIn=expires_at - create_time())
     # The response contains the presigned URL
-    return psurl
+    return ps_url
 
 
 def create_time():
