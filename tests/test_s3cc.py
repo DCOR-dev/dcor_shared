@@ -119,6 +119,25 @@ def test_create_presigned_url(enqueue_job_mock, tmp_path):
 @pytest.mark.usefixtures('clean_db', 'with_request_context')
 @mock.patch('ckan.plugins.toolkit.enqueue_job',
             side_effect=synchronous_enqueue_job)
+def test_get_s3_attributes_for_artifact(enqueue_job_mock):
+    rid, _, _, org_dict = setup_s3_resource_on_ckan()
+
+    # Make sure the resource exists
+    res_dict = helpers.call_action("resource_show", id=rid)
+    assert res_dict["id"] == rid, "sanity check"
+
+    # get the size
+    meta = s3cc.get_s3_attributes_for_artifact(rid)
+    assert meta["size"] == 904729
+    assert meta["success"]
+    assert meta["etag"]
+    assert meta["server"]
+
+
+@pytest.mark.ckan_config('ckan.plugins', 'dcor_schemas')
+@pytest.mark.usefixtures('clean_db', 'with_request_context')
+@mock.patch('ckan.plugins.toolkit.enqueue_job',
+            side_effect=synchronous_enqueue_job)
 def test_get_s3_bucket_object_for_artifact(enqueue_job_mock):
     rid, _, _, org_dict = setup_s3_resource_on_ckan()
 

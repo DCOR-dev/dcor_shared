@@ -61,6 +61,81 @@ def create_presigned_url(
                                    filename=filename)
 
 
+def get_s3_attributes_for_artifact(
+        resource_id: str,
+        artifact: Literal["condensed", "preview", "resource"] = "resource"):
+    """Return all attribute for an artifact in the S3 object store
+
+    Returns
+    -------
+    meta: dict
+        Metadata dictionary with the keys "etag", "server", "size",
+        and "success".
+    """
+    bucket_name, object_name = get_s3_bucket_object_for_artifact(
+        resource_id=resource_id, artifact=artifact)
+    s3_client, _, _ = s3.get_s3()
+    attr_info = s3_client.head_object(Bucket=bucket_name, Key=object_name)
+    # Example output from MinIO::
+    #
+    #     {'AcceptRanges': 'bytes',
+    #      'ContentLength': 904729,
+    #      'ContentType': 'application/octet-stream',
+    #      'ETag': '"108d47e80f3e5f35110493b1fdcd30d5"',
+    #      'LastModified': datetime.datetime(2024, 3, 7, 8, 15,
+    #                                        tzinfo=tzutc()),
+    #      'Metadata': {},
+    #      'ResponseMetadata': {
+    #         'HTTPHeaders': {
+    #             'accept-ranges': 'bytes',
+    #             'content-length': '904729',
+    #             'content-type': 'application/octet-stream',
+    #             'date': 'Thu, 07 Mar 2024 08:15:02 GMT',
+    #             'etag': '"108d47e80f3e5f35110493b1fdcd30d5"',
+    #             'last-modified': 'Thu, 07 Mar 2024 '
+    #                              '08:15:00 GMT',
+    #             'server': 'MinIO',
+    #             'strict-transport-security': 'max-age=31536000; '
+    #                                          'includeSubDomains',
+    #             'vary': 'Origin, Accept-Encoding',
+    #             'x-amz-id-2': 'dd9025bab4ad464b049177c95eb6e...',
+    #             'x-amz-request-id': '17BA6D680CB67A2C',
+    #             'x-amz-tagging-count': '1',
+    #             'x-content-type-options': 'nosniff',
+    #             'x-xss-protection': '1; mode=block'},
+    #         'HTTPStatusCode': 200,
+    #         'HostId': 'dd9025bab4ad464b049177c95eb6ebf3...',
+    #         'RequestId': '17BA6D680CB67A2C',
+    #         'RetryAttempts': 0}
+    #      }
+    meta = {}
+    for key, funcs in [
+        ("etag", [lambda m: m.get("ETag"),
+                  lambda m: m.get("ResponseMetadata",
+                                  {}).get("HTTPHeaders",
+                                          {}).get("etag"),
+                  ]),
+        ("server", [lambda m: m.get("ResponseMetadata",
+                                    {}).get("HTTPHeaders",
+                                            {}).get("server", "unknown")
+                    ]),
+        ("size", [lambda m: m.get("ContentLength"),
+                  lambda m: m.get("ResponseMetadata",
+                                  {}).get("HTTPHeaders",
+                                          {}).get("content-length"),
+                  ]),
+        ("success", [lambda m: m.get("ResponseMetadata",
+                                     {}).get("HTTPStatusCode", 404) == 200
+                     ]),
+    ]:
+        for fn in funcs:
+            val = fn(attr_info)
+            if val is not None:
+                meta[key] = val
+                break
+    return meta
+
+
 def get_s3_bucket_object_for_artifact(
         resource_id: str,
         artifact: Literal["condensed", "preview", "resource"] = "resource"):
