@@ -23,6 +23,11 @@ data_path = pathlib.Path(__file__).parent / "data"
 
 def setup_s3_resource_on_ckan(private=False, resource_path=None):
     """Create an S3 resource in CKAN"""
+    if resource_path is None:
+        resource_path = data_path / "calibration_beads_47.rtdc"
+
+    file_size = resource_path.stat().st_size
+
     user = factories.User()
     owner_org = factories.Organization(users=[{
         'name': user['id'],
@@ -34,18 +39,18 @@ def setup_s3_resource_on_ckan(private=False, resource_path=None):
 
     # Upload the resource to S3 (note that it is not required that the
     # dataset exists)
-    response = helpers.call_action("resource_upload_s3_url",
+    response = helpers.call_action("resource_upload_s3_urls",
                                    test_context,
                                    organization_id=owner_org["id"],
+                                   file_size=file_size,
                                    )
     rid = response["resource_id"]
-    if resource_path is None:
-        resource_path = data_path / "calibration_beads_47.rtdc"
 
     upload_presigned_to_s3(
-        psurl=response["url"],
-        fields=response["fields"],
-        path_to_upload=resource_path)
+        path=resource_path,
+        upload_urls=response["upload_urls"],
+        complete_url=response["complete_url"],
+    )
 
     # Create the dataset
     pkg_dict = helpers.call_action("package_create",
@@ -69,7 +74,7 @@ def setup_s3_resource_on_ckan(private=False, resource_path=None):
                                     }],
         )
     assert new_pkg_dict["package"]["num_resources"] == 1
-    s3_url = response["url"] + "/" + response["fields"]["key"]
+    s3_url = response["upload_urls"][0].split("?")[0]
     return rid, s3_url, new_pkg_dict, owner_org
 
 

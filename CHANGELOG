@@ -1,3 +1,7 @@
+0.10.0
+ - BREAKING CHANGE: presigned URLs for uploading resources now work
+   differently. For small files (< 1 GiB), a single upload URL for
+   PUT is created. For larger files, a multipart upload is started.
 0.9.1
  - feat: add convenience method `get_s3_attributes_for_artifact`
 0.9.0

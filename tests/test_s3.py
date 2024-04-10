@@ -1,14 +1,14 @@
-import base64
 import hashlib
 from unittest import mock
 import pathlib
+import random
 import uuid
 
 import botocore.exceptions
 import pytest
 import requests
 
-from dcor_shared import s3, sha256sum
+from dcor_shared import get_ckan_config_option, s3, sha256sum
 from dcor_shared.testing import upload_presigned_to_s3
 
 
@@ -189,14 +189,61 @@ def test_presigned_upload():
     bucket_name = f"test-circle-{uuid.uuid4()}"
     rid = str(uuid.uuid4())
     object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
-    psurl, fields = s3.create_presigned_upload_url(bucket_name=bucket_name,
-                                                   object_name=object_name)
+    upload_urls, complete_url = s3.create_presigned_upload_urls(
+        bucket_name=bucket_name,
+        object_name=object_name,
+        file_size=path.stat().st_size,
+    )
+
+    assert len(upload_urls) == 1, "no multipart upload"
+    assert complete_url is None, "no multipart upload"
 
     # This is what DCOR-Aid would do to upload the file
-    upload_presigned_to_s3(psurl=psurl,
-                           fields=fields,
-                           path_to_upload=path
-                           )
+    etag = upload_presigned_to_s3(
+        path=path,
+        upload_urls=upload_urls,
+        complete_url=complete_url,
+        )
+
+    assert hashlib.md5(path.read_bytes()).hexdigest() == etag
+
+    hash_exp = hashlib.sha256(path.read_bytes()).hexdigest()
+    hash_act = s3.compute_checksum(bucket_name=bucket_name,
+                                   object_name=object_name)
+    assert hash_exp == hash_act
+
+
+def test_presigned_upload_multipart(tmp_path):
+    path = tmp_path / "calibration_beads_47.rtdc"
+    with path.open("wb") as fd:
+        for ii in range(20):  # 20 MiB
+            fd.write(bytearray(1024**2))
+
+    # This is what would happen on the server when DCOR-Aid requests an
+    # upload URL
+    bucket_name = f"test-circle-{uuid.uuid4()}"
+    rid = str(uuid.uuid4())
+    object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
+    upload_urls, complete_url = s3.create_presigned_upload_urls(
+        bucket_name=bucket_name,
+        object_name=object_name,
+        # pretend as if we had a huge file
+        file_size=int(1.5*1024**3),
+    )
+
+    assert len(upload_urls) == 2, "multipart upload"
+    assert complete_url is not None, "multipart upload"
+
+    # This is what DCOR-Aid would do to upload the file
+    etag = upload_presigned_to_s3(
+        path=path,
+        upload_urls=upload_urls,
+        complete_url=complete_url,
+        )
+    # This is how Amazon computes the ETag for multipart uploads.
+    md5part = hashlib.md5(bytearray(1024**2)*10).digest()
+    etag_exp = hashlib.md5(md5part+md5part).hexdigest() + "-2"
+    assert etag == etag_exp
 
     hash_exp = hashlib.sha256(path.read_bytes()).hexdigest()
     hash_act = s3.compute_checksum(bucket_name=bucket_name,
@@ -205,7 +252,7 @@ def test_presigned_upload():
 
 
 def test_presigned_upload_private_by_default():
-    """The presigend upload should be private by default"""
+    """The presigned upload should be private by default"""
     path = data_path / "calibration_beads_47.rtdc"
 
     # This is what would happen on the server when DCOR-Aid requests an
@@ -213,16 +260,20 @@ def test_presigned_upload_private_by_default():
     bucket_name = f"test-circle-{uuid.uuid4()}"
     rid = str(uuid.uuid4())
     object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
-    psurl, fields = s3.create_presigned_upload_url(bucket_name=bucket_name,
-                                                   object_name=object_name)
+
+    upload_urls, complete_url = s3.create_presigned_upload_urls(
+        bucket_name=bucket_name,
+        object_name=object_name,
+        file_size=path.stat().st_size,
+    )
 
     # This is what DCOR-Aid would do to upload the file
-    upload_presigned_to_s3(psurl=psurl,
-                           fields=fields,
-                           path_to_upload=path
+    upload_presigned_to_s3(path=path,
+                           upload_urls=upload_urls,
+                           complete_url=complete_url,
                            )
 
-    s3_url = "/".join([psurl, fields["key"]])
+    s3_url = upload_urls[0].split("?")[0]
 
     # attempt to download the data
     response = requests.get(s3_url)
@@ -245,35 +296,33 @@ def test_presigned_upload_wrong_access():
     bucket_name = f"test-circle-{uuid.uuid4()}"
     rid = str(uuid.uuid4())
     object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
-    psurl, fields = s3.create_presigned_upload_url(bucket_name=bucket_name,
-                                                   object_name=object_name)
-    # Try to upload the file under a different object name
-    # (this tests the S3 access restrictions)
-    rid2 = str(uuid.uuid4())
-    object_name_bad = f"resource/{rid2[:3]}/{rid2[3:6]}/{rid2[6:]}"
-    # replace the old with the bad object name
-    new_policy = base64.b64encode(
-        base64.b64decode(fields["policy"])
-        .decode("utf-8")
-        .replace(object_name, object_name_bad)
-        .encode("utf-8")
+
+    upload_urls, complete_url = s3.create_presigned_upload_urls(
+        bucket_name=bucket_name,
+        object_name=object_name,
+        file_size=path.stat().st_size,
     )
-    # sanity check
-    assert new_policy != fields["policy"]
-    fields["policy"] = new_policy
-    fields["key"] = object_name_bad
+
+    assert len(upload_urls) == 1, "no multipart upload"
+    assert complete_url is None, "no multipart upload"
+
+    # Try to change the signature
+    parts = upload_urls[0].split("&")
+    for ii, part in enumerate(parts):
+        if part.startswith("Signature="):
+            new_sig = part[:-10] + part[-10:][::-1]
+            parts[ii] = new_sig
+            break
+    else:
+        assert False
+    upload_urls[0] = "&".join(parts)
 
     with pytest.raises(ValueError, match="Upload failed with 403: Forbidden"):
         # This is what DCOR-Aid would do to upload the file
-        upload_presigned_to_s3(psurl=psurl,
-                               fields=fields,
-                               path_to_upload=path
+        upload_presigned_to_s3(path=path,
+                               upload_urls=upload_urls,
+                               complete_url=complete_url,
                                )
-
-    with pytest.raises(botocore.exceptions.ClientError, match="Not Found"):
-        # Make sure the file does not exist
-        s3.compute_checksum(bucket_name=bucket_name,
-                            object_name=object_name_bad)
 
 
 def test_presigned_upload_wrong_key():
@@ -285,19 +334,28 @@ def test_presigned_upload_wrong_key():
     bucket_name = f"test-circle-{uuid.uuid4()}"
     rid = str(uuid.uuid4())
     object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
-    psurl, fields = s3.create_presigned_upload_url(bucket_name=bucket_name,
-                                                   object_name=object_name)
+
+    upload_urls, complete_url = s3.create_presigned_upload_urls(
+        bucket_name=bucket_name,
+        object_name=object_name,
+        file_size=path.stat().st_size,
+    )
+
+    assert len(upload_urls) == 1, "no multipart upload"
+    assert complete_url is None, "no multipart upload"
+
     # Try to upload the file under a different object name
     # (this tests the S3 access restrictions)
     rid2 = str(uuid.uuid4())
     object_name_bad = f"resource/{rid2[:3]}/{rid2[3:6]}/{rid2[6:]}"
-    fields["key"] = object_name_bad
+    # replace the old with the bad object name
+    upload_urls[0] = upload_urls[0].replace(object_name, object_name_bad)
 
     with pytest.raises(ValueError, match="Upload failed with 403: Forbidden"):
         # This is what DCOR-Aid would do to upload the file
-        upload_presigned_to_s3(psurl=psurl,
-                               fields=fields,
-                               path_to_upload=path
+        upload_presigned_to_s3(path=path,
+                               upload_urls=upload_urls,
+                               complete_url=complete_url,
                                )
 
     with pytest.raises(botocore.exceptions.ClientError, match="Not Found"):

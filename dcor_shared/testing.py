@@ -3,7 +3,7 @@ from __future__ import annotations
 from io import BytesIO
 import numbers
 import pathlib
-from typing import Dict
+from typing import Dict, List
 import uuid
 
 import ckan.authz
@@ -11,7 +11,6 @@ import ckan.tests.factories as factories
 import ckan.tests.helpers as helpers
 from ckan.tests.pytest_ckan.fixtures import FakeFileStorage
 import requests
-from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
 
 import pytest
 
@@ -251,36 +250,72 @@ def synchronous_enqueue_job(job_func, args=None, kwargs=None, title=None,
     job_func(*args, **kwargs)
 
 
-def upload_presigned_to_s3(psurl, fields, path_to_upload):
+def upload_presigned_to_s3(
+        path: str | pathlib.Path,
+        upload_urls: List[str],
+        complete_url: str | None):
     """Helper function for uploading data to S3
 
-    This is exactly how DCOR-Aid would be uploading things (with the
-    requests_toolbelt package). This could have been a little simpler,
-    but for the sake of reproducibility, we do it the DCOR-Aid way.
+    This is how DCOR-Aid would be uploading things.
+
+    Parameters
+    ----------
+    path: str or pathlib.Path
+        file to upload
+    upload_urls: list
+        List of the presigned URLs required for the upload.
+        There will always be the key "urls" containing a list of
+        presigned URLs.
+    complete_url: str
+        If a multipart upload is necessary, this is the presigned URL
+        required to finalize the upload. For more information, see
+        `https://boto3.amazonaws.com/v1/documentation/api/latest/
+        reference/services/s3/client/complete_multipart_upload.html
+        #complete-multipart-upload`_ or the example below
     """
-    # callback function for monitoring the upload progress
-    # open the input file for streaming
-    with path_to_upload.open("rb") as fd:
-        fields["file"] = (fields["key"], fd)
-        e = MultipartEncoder(fields=fields)
-        m = MultipartEncoderMonitor(
-            e, lambda monitor: print(f"Bytes: {monitor.bytes_read}"))
-        # Increase the read size to speed-up upload (the default chunk
-        # size for uploads in urllib is 8k which results in a lot of
-        # Python code being involved in uploading a 20GB file; Setting
-        # the chunk size to 4MB should increase the upload speed):
-        # https://github.com/requests/toolbelt/issues/75
-        # #issuecomment-237189952
-        m._read = m.read
-        m.read = lambda size: m._read(4 * 1024 * 1024)
-        # perform the actual upload
-        hrep = requests.post(
-            psurl,
-            data=m,
-            headers={'Content-Type': m.content_type},
-            verify=True,  # verify SSL connection
-            timeout=27.3,  # timeout to avoid freezing
-        )
-    if hrep.status_code != 204:
+    path = pathlib.Path(path)
+    with path.open("rb") as fd:
+        if len(upload_urls) > 1:
+            # Multipart upload
+            # Determine the part size for multipart upload
+            num_parts = len(upload_urls)
+            file_size = path.stat().st_size
+            if file_size % num_parts == 0:
+                part_size = file_size // num_parts
+            else:
+                part_size = file_size // num_parts + 1
+            # Upload each part
+            etags = []
+            for psurl in upload_urls:
+                respi = requests.put(psurl,
+                                     data=fd.read(part_size),
+                                     timeout=3,
+                                     )
+                etag_part = respi.headers.get("ETag", "").strip("'").strip('"')
+                etags.append(etag_part)
+            # Finish the multipart upload
+            c_xml = "<CompleteMultipartUpload>\n"
+            for ii, etag in enumerate(etags):
+                c_xml += (f"  <Part>\n"
+                          + f"    <PartNumber>{ii + 1}</PartNumber>\n"
+                          + f"    <ETag>{etag}</ETag>\n"
+                          + f"  </Part>\n"
+                          )
+            c_xml += "</CompleteMultipartUpload>"
+            resp = requests.post(
+                complete_url,
+                data=c_xml,
+                timeout=3,
+            )
+            etag_full = resp.headers.get("ETag", "").strip("'").strip('"')
+        else:
+            # Single file upload
+            resp = requests.put(upload_urls[0],
+                                data=fd,
+                                timeout=3)
+            etag_full = resp.headers.get("ETag", "").strip("'").strip('"')
+    if not etag_full:
         raise ValueError(
-            f"Upload failed with {hrep.status_code}: {hrep.reason}")
+            f"Upload failed with {resp.status_code}: {resp.reason} "
+            f"({resp.headers})")
+    return etag_full
