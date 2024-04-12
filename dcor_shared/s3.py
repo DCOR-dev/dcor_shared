@@ -6,6 +6,7 @@ import hashlib
 import json
 import pathlib
 import time
+import traceback
 from typing import List, Tuple
 import warnings
 
@@ -346,18 +347,27 @@ def make_object_public(bucket_name, object_name, missing_ok=False):
         for item in response["TagSet"]:
             tags.append(f"{item['Key']}={item['Value']}")
         if not tags.count("public=true"):
-            s3_client.put_object_tagging(
-                Bucket=bucket_name,
-                Key=object_name,
-                Tagging={
-                    'TagSet': [
-                        {
-                            'Key': 'public',
-                            'Value': 'true',
+            for retry in range(5):
+                try:
+                    s3_client.put_object_tagging(
+                        Bucket=bucket_name,
+                        Key=object_name,
+                        Tagging={
+                            'TagSet': [
+                                {
+                                    'Key': 'public',
+                                    'Value': 'true',
+                                },
+                            ],
                         },
-                    ],
-                },
-            )
+                    )
+                except botocore.exceptions.ClientError:
+                    trcbck = traceback.format_exc()
+                    continue
+                else:
+                    break
+            else:
+                raise ValueError(f"Encountered Error:\n{trcbck}")
 
 
 def object_exists(bucket_name, object_name):
