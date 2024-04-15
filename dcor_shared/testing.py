@@ -121,7 +121,7 @@ def make_dataset_via_s3(
         CKAN dictionary of the owner organization
     resource_path: str or pathlib.Path
         path to the resource file to upload. If not specified, then
-        not resource is created for the dataset
+        no resource is created for the dataset
     activate: bool
         whether to activate the dataset
     kwargs: dict
