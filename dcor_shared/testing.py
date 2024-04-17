@@ -296,10 +296,10 @@ def upload_presigned_to_s3(
             # Finish the multipart upload
             c_xml = "<CompleteMultipartUpload>\n"
             for ii, etag in enumerate(etags):
-                c_xml += (f"  <Part>\n"
+                c_xml += ("  <Part>\n"
                           + f"    <PartNumber>{ii + 1}</PartNumber>\n"
                           + f"    <ETag>{etag}</ETag>\n"
-                          + f"  </Part>\n"
+                          + "  </Part>\n"
                           )
             c_xml += "</CompleteMultipartUpload>"
             resp = requests.post(
