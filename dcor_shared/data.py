@@ -64,9 +64,15 @@ def wait_for_resource(resource_id: str,
     t0 = time.time()
     ld = len(DUMMY_BYTES)
     while True:
-        res_dict = resource_show(context={'ignore_auth': True,
-                                          'user': 'default'},
-                                 data_dict={"id": resource_id})
+        try:
+            res_dict = resource_show(context={'ignore_auth': True,
+                                              'user': 'default'},
+                                     data_dict={"id": resource_id})
+        except logic.NotFound:
+            # Other processes are still working on getting the resource
+            # online. We have to wait.
+            time.sleep(0.1)
+            continue
 
         s3_ok = res_dict.get("s3_available", None)
         if time.time() - t0 > timeout:
