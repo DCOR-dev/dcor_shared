@@ -181,9 +181,9 @@ def get_s3_dc_handle(resource_id):
     s3_url = get_s3_url_for_artifact(resource_id)
     ds = fmt_s3.RTDC_S3(
         url=s3_url,
-        secret_id=get_ckan_config_option(
+        secret_access_key=get_ckan_config_option(
             "dcor_object_store.access_key_id"),
-        secret_key=get_ckan_config_option(
+        access_key_id=get_ckan_config_option(
             "dcor_object_store.secret_access_key"),
         # Disable basins, because they could point to files on the
         # local file system (security).
