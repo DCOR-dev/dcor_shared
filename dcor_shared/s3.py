@@ -289,6 +289,7 @@ def create_time():
 @functools.lru_cache()
 def get_s3():
     """Return the current S3 client as defined by ckan.ini"""
+    from ckan import common as ckan_common
     # Create a new session (do not use the default session)
     s3_session = boto3.Session(
         aws_access_key_id=get_ckan_config_option(
@@ -296,8 +297,10 @@ def get_s3():
         aws_secret_access_key=get_ckan_config_option(
             "dcor_object_store.secret_access_key"),
     )
-    ssl_verify = get_ckan_config_option(
-        "dcor_object_store.ssl_verify").lower() == "true"
+    ssl_verify = ckan_common.config.get("dcor_object_store.ssl_verify")
+    if isinstance("ssl_verify", str):
+        # additional check (in case CKAN did not convert to bool)
+        ssl_verify = ssl_verify.lower() == "true"
     s3_client = s3_session.client(
         service_name='s3',
         use_ssl=ssl_verify,

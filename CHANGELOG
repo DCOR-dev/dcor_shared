@@ -1,4 +1,5 @@
 0.11.0
+ - fix: support boolean ssl_verify option returned by CKAN
  - setup: migrate to pyproject.toml
 0.10.3
  - reg: typo in dclab S3 instantiation
