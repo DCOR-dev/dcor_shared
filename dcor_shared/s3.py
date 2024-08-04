@@ -298,7 +298,7 @@ def get_s3():
             "dcor_object_store.secret_access_key"),
     )
     ssl_verify = ckan_common.config.get("dcor_object_store.ssl_verify")
-    if isinstance("ssl_verify", str):
+    if isinstance(ssl_verify, str):
         # additional check (in case CKAN did not convert to bool)
         ssl_verify = ssl_verify.lower() == "true"
     s3_client = s3_session.client(
