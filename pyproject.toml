@@ -40,6 +40,3 @@ changelog = "https://github.com/DCOR-dev/dcor_shared/blob/main/CHANGELOG"
 [tool.setuptools_scm]
 write_to = "dcor_shared/_version.py"
 version_scheme = "post-release"
-
-[tool.setuptools]
-packages = ["dcor_shared"]
