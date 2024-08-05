@@ -1,3 +1,5 @@
+0.11.2
+ - build: cleanup
 0.11.1
  - build: fix CI pipeline
 0.11.0
