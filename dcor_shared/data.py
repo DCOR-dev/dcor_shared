@@ -2,7 +2,6 @@ import functools
 import hashlib
 import pathlib
 import time
-import warnings
 
 from .ckan import get_resource_path
 
