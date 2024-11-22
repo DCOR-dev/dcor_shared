@@ -1,3 +1,5 @@
+0.11.4
+ - ref: wait longer in wait_for_resource
 0.11.3
  - ref: wait longer in `wait_for_resource` loop
  - ref: turn deprecation in `wait_for_resource` into ValueError
