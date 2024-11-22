@@ -1,4 +1,7 @@
 0.11.3
+ - ref: wait longer in `wait_for_resource` loop
+ - ref: turn deprecation in `wait_for_resource` into ValueError
+0.11.3
  - fix: did not extract `dcor_object_store.ssl_verify` from config
 0.11.2
  - build: cleanup

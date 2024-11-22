@@ -47,13 +47,7 @@ def wait_for_resource(resource_id: str,
     from ckan import logic
 
     if len(resource_id) != 36:
-        warnings.warn("Please pass the CKAN resource id as `resource_id` "
-                      "instead of a string or a path. This will raise an "
-                      "exception in the future.",
-                      DeprecationWarning)
-        # The user passed a local path on the block storage. These look like
-        # this: /data/dcor-instance/resources/RE/SO/URCE-ID
-        resource_id = "".join(resource_id.split("/")[-3])
+        raise ValueError(f"Invalid resource id: {resource_id}")
 
     resource_show = logic.get_action("resource_show")
     path = pathlib.Path(get_resource_path(resource_id))
@@ -71,7 +65,7 @@ def wait_for_resource(resource_id: str,
         except logic.NotFound:
             # Other processes are still working on getting the resource
             # online. We have to wait.
-            time.sleep(0.1)
+            time.sleep(5)
             continue
 
         s3_ok = res_dict.get("s3_available", None)
@@ -82,17 +76,17 @@ def wait_for_resource(resource_id: str,
             # If the dataset is on S3, it is considered to be available.
             break
         elif not path.exists():
-            time.sleep(0.05)
+            time.sleep(5)
             continue
         elif dcor_depot_available and not path.is_symlink():
             # Resource is only available when it is symlinked by
             # the ckanext.dcor_depot `symlink_user_dataset` job
             # (or by the ckanext.dcor_depot importers).
-            time.sleep(0.05)
+            time.sleep(5)
             continue
         elif path.stat().st_size == ld and path.read_bytes() == DUMMY_BYTES:
             # wait a bit
-            time.sleep(0.01)
+            time.sleep(5)
             continue
         else:
             # not a dummy file
