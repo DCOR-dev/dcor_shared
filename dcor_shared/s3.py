@@ -315,6 +315,7 @@ def get_s3():
     return s3_client, s3_session, s3_resource
 
 
+@functools.lru_cache()
 def is_available():
     """Return True if S3 credentials have been specified"""
     s3_key_id = get_ckan_config_option("dcor_object_store.access_key_id")
