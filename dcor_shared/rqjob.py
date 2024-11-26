@@ -46,18 +46,17 @@ class RQJob:
             redis_connect = ckan_redis_connect()
 
         jid = f"{resource['package_id']}_{resource['position']}_"
+        jid_cur = jid + self.name
         rq_args = {
             "timeout": self.timeout,
             "at_front": self.at_front,
+            "job_id": jid_cur,
         }
         if self.depends_on:
             rq_args["depends_on"] = [f"{jid}_{dep}" for dep in self.depends_on]
 
-        jid_cur = jid + self.name
-
         if not Job.exists(jid_cur, connection=redis_connect):
-            toolkit.enqueue_job(jid_cur,
-                                self.method,
+            toolkit.enqueue_job(self.method,
                                 [resource],
                                 title=self.title,
                                 queue=self.queue,
