@@ -85,7 +85,7 @@ class RQJob:
         for ii in range(len(job_dict)):
             for key in list(job_dict.keys()):
                 job = job_dict[key]
-                if set(job.depends_on) < set(job_dict_ordered.keys()):
+                if set(job.depends_on) <= set(job_dict_ordered.keys()):
                     # All jobs this job depends on are in the ordered list
                     job_dict_ordered[key] = job
                     job_dict.pop(key)
