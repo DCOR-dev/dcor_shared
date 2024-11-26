@@ -1,6 +1,5 @@
 import collections
 from typing import Callable, Dict, List
-import warnings
 
 
 class RQJob:
@@ -18,6 +17,7 @@ class RQJob:
        run `jobs.RQJob.enqueue_all_jobs(resource, ckanext="extension_name")`
     """
     _instances = []
+
     def __init__(self,
                  method: Callable,
                  ckanext: str,
