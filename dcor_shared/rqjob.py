@@ -95,7 +95,7 @@ class RQJob:
                 f"The following jobs have unmet dependencies and will not "
                 f"be returned: {list(job_dict.keys())}")
 
-        return job_dict_ordered.values()
+        return list(job_dict_ordered.values())
 
 
 class rqjob_register:
