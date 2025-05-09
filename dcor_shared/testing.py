@@ -200,8 +200,12 @@ def make_resource(resource_path, create_with_upload, create_context,
     return resource
 
 
-def make_resource_via_s3(resource_path, organization_id, dataset_id,
-                         create_context, private=False):
+def make_resource_via_s3(
+        resource_path: pathlib.Path | str,
+        organization_id: str,
+        dataset_id: str,
+        create_context: Dict,
+        private: bool = False):
     """Upload a resource to S3 and register it with CKAN"""
     bucket_name = get_ckan_config_option(
         "dcor_object_store.bucket_name").format(
