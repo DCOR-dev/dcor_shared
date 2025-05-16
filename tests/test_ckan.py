@@ -1,12 +1,10 @@
 import pathlib
 from unittest import mock
 
-import ckanext.dcor_schemas.plugin
-
 from dcor_shared import get_resource_dc_config, get_resource_info
 
 import pytest
-from dcor_shared.testing import make_dataset, synchronous_enqueue_job
+from dcor_shared.testing import make_dataset_via_s3, synchronous_enqueue_job
 
 data_path = pathlib.Path(__file__).parent / "data"
 
@@ -15,15 +13,8 @@ data_path = pathlib.Path(__file__).parent / "data"
 @pytest.mark.usefixtures('clean_db', 'with_request_context')
 @mock.patch('ckan.plugins.toolkit.enqueue_job',
             side_effect=synchronous_enqueue_job)
-def test_get_resource_dc_config(enqueue_job_mock, create_with_upload,
-                                monkeypatch):
-    monkeypatch.setattr(
-        ckanext.dcor_schemas.plugin,
-        'DISABLE_AFTER_DATASET_CREATE_FOR_CONCURRENT_JOB_TESTS',
-        True)
-
-    _, res_dict = make_dataset(
-        create_with_upload=create_with_upload,
+def test_get_resource_dc_config(enqueue_job_mock):
+    _, res_dict = make_dataset_via_s3(
         resource_path=data_path / "calibration_beads_47.rtdc",
         activate=True)
 
@@ -37,14 +28,8 @@ def test_get_resource_dc_config(enqueue_job_mock, create_with_upload,
 @pytest.mark.usefixtures('clean_db', 'with_request_context')
 @mock.patch('ckan.plugins.toolkit.enqueue_job',
             side_effect=synchronous_enqueue_job)
-def test_get_resource_info(enqueue_job_mock, create_with_upload, monkeypatch):
-    monkeypatch.setattr(
-        ckanext.dcor_schemas.plugin,
-        'DISABLE_AFTER_DATASET_CREATE_FOR_CONCURRENT_JOB_TESTS',
-        True)
-
-    ds_dict, res_dict = make_dataset(
-        create_with_upload=create_with_upload,
+def test_get_resource_info(enqueue_job_mock):
+    ds_dict, res_dict = make_dataset_via_s3(
         resource_path=data_path / "calibration_beads_47.rtdc",
         activate=True)
 

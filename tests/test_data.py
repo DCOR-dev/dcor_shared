@@ -5,7 +5,6 @@ from unittest import mock
 import uuid
 
 from ckan import logic
-import ckanext.dcor_schemas.plugin
 
 from dcor_shared import (
     get_dc_instance, get_resource_path, s3, sha256sum, wait_for_resource
@@ -13,7 +12,7 @@ from dcor_shared import (
 
 import pytest
 import ckan.tests.factories as factories
-from dcor_shared.testing import make_dataset, synchronous_enqueue_job
+from dcor_shared.testing import make_dataset_via_s3, synchronous_enqueue_job
 
 data_path = pathlib.Path(__file__).parent / "data"
 
@@ -22,15 +21,8 @@ data_path = pathlib.Path(__file__).parent / "data"
 @pytest.mark.usefixtures('clean_db', 'with_request_context')
 @mock.patch('ckan.plugins.toolkit.enqueue_job',
             side_effect=synchronous_enqueue_job)
-def test_get_dc_instance_file(enqueue_job_mock, create_with_upload,
-                              monkeypatch):
-    monkeypatch.setattr(
-        ckanext.dcor_schemas.plugin,
-        'DISABLE_AFTER_DATASET_CREATE_FOR_CONCURRENT_JOB_TESTS',
-        True)
-
-    ds_dict, _ = make_dataset(
-        create_with_upload=create_with_upload,
+def test_get_dc_instance_file(enqueue_job_mock):
+    ds_dict, _ = make_dataset_via_s3(
         resource_path=data_path / "calibration_beads_47.rtdc",
         activate=True)
 
@@ -60,15 +52,8 @@ def test_get_dc_instance_file_fails_without_actual_resource():
 @pytest.mark.usefixtures('clean_db', 'with_request_context')
 @mock.patch('ckan.plugins.toolkit.enqueue_job',
             side_effect=synchronous_enqueue_job)
-def test_get_dc_instance_s3(enqueue_job_mock, create_with_upload,
-                            monkeypatch):
-    monkeypatch.setattr(
-        ckanext.dcor_schemas.plugin,
-        'DISABLE_AFTER_DATASET_CREATE_FOR_CONCURRENT_JOB_TESTS',
-        True)
-
-    ds_dict, _ = make_dataset(
-        create_with_upload=create_with_upload,
+def test_get_dc_instance_s3(enqueue_job_mock):
+    ds_dict, _ = make_dataset_via_s3(
         resource_path=data_path / "calibration_beads_47.rtdc",
         activate=True)
 

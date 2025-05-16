@@ -7,10 +7,9 @@ import pytest
 from ckan import model
 import ckan.tests.helpers as helpers
 import ckan.tests.factories as factories
-import ckanext.dcor_schemas.plugin
 
 from dcor_shared.testing import (
-    make_dataset, synchronous_enqueue_job, upload_presigned_to_s3
+    make_dataset_via_s3, synchronous_enqueue_job, upload_presigned_to_s3
 )
 from dcor_shared import s3, s3cc, sha256sum
 
@@ -172,20 +171,13 @@ def test_get_s3_handle(enqueue_job_mock):
 @pytest.mark.usefixtures('clean_db', 'with_request_context')
 @mock.patch('ckan.plugins.toolkit.enqueue_job',
             side_effect=synchronous_enqueue_job)
-def test_get_s3_dc_handle_basin_based(enqueue_job_mock, create_with_upload,
-                                      monkeypatch, tmp_path):
-    monkeypatch.setattr(
-        ckanext.dcor_schemas.plugin,
-        'DISABLE_AFTER_DATASET_CREATE_FOR_CONCURRENT_JOB_TESTS',
-        True)
-
+def test_get_s3_dc_handle_basin_based(enqueue_job_mock, tmp_path):
     resource_path = tmp_path / "data.rtdc"
     shutil.copy2(data_path / "calibration_beads_47.rtdc", resource_path)
     with h5py.File(resource_path, "a") as h5:
         del h5["events/volume"]
 
-    _, res_dict = make_dataset(
-        create_with_upload=create_with_upload,
+    _, res_dict = make_dataset_via_s3(
         resource_path=resource_path,
         activate=True)
     rid = res_dict["id"]

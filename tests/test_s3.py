@@ -1,14 +1,13 @@
 import hashlib
 from unittest import mock
 import pathlib
-import random
 import uuid
 
 import botocore.exceptions
 import pytest
 import requests
 
-from dcor_shared import get_ckan_config_option, s3, sha256sum
+from dcor_shared import s3, sha256sum
 from dcor_shared.testing import upload_presigned_to_s3
 
 

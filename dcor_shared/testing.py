@@ -5,6 +5,7 @@ import numbers
 import pathlib
 from typing import Dict, List
 import uuid
+import warnings
 
 import ckan.authz
 import ckan.tests.factories as factories
@@ -47,6 +48,10 @@ def create_with_upload_no_temp(clean_db, ckan_config, monkeypatch):
 def make_dataset(create_context=None, owner_org=None, create_with_upload=None,
                  resource_path=None, activate=False, **kwargs):
     """Create a dataset with a resource for testing"""
+    warnings.warn(
+        "`make_dataset` is deprecated, use `make_dataset_via_s3` instead",
+        DeprecationWarning)
+
     if create_context is None:
         user = factories.User()
         create_context = {'ignore_auth': False,
@@ -188,6 +193,9 @@ def make_dataset_via_s3(
 
 def make_resource(resource_path, create_with_upload, create_context,
                   dataset_id):
+    warnings.warn(
+        "`make_resource` is deprecated, use `make_resource_via_s3` instead",
+        DeprecationWarning)
     content = resource_path.read_bytes()
     rs = create_with_upload(
         data=content,
