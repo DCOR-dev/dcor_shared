@@ -1,5 +1,6 @@
 0.12.1
- - ref: deprecate `get_resource_path`
+ - ci: migrate to docker
+ - ref: deprecate `get_resource_path`, `make_dataset`, `make_resource`
 0.12.0
  - feat: introduce rqjob submodule for managing CKAN background jobs
 0.11.5
