@@ -140,6 +140,8 @@ def test_get_s3_attributes_for_artifact(enqueue_job_mock):
 
 
 @pytest.mark.ckan_config('ckan.plugins', 'dcor_schemas')
+@pytest.mark.ckan_config('dcor_object_store.bucket_name',
+                         'circle-{organization_id}')
 @pytest.mark.usefixtures('clean_db', 'with_request_context')
 @mock.patch('ckan.plugins.toolkit.enqueue_job',
             side_effect=synchronous_enqueue_job)

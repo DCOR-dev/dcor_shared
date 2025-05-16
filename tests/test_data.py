@@ -85,6 +85,8 @@ def test_get_dc_instance_s3(enqueue_job_mock, create_with_upload,
 
 
 @pytest.mark.ckan_config('ckan.plugins', 'dcor_depot dcor_schemas')
+@pytest.mark.ckan_config('dcor_object_store.bucket_name',
+                         'circle-{organization_id}')
 @pytest.mark.usefixtures('clean_db', 'with_request_context')
 @mock.patch('ckan.plugins.toolkit.enqueue_job',
             side_effect=synchronous_enqueue_job)
