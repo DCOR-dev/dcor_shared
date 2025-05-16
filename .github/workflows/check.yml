@@ -99,4 +99,5 @@ jobs:
           pytest -v --ckan-ini=/srv/app/ckan.ini \
              --cov=dcor_shared \
              --cov-report=xml \
-             --cov-append
+             --cov-append \
+             tests
