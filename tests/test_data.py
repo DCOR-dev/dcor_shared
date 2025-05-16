@@ -7,7 +7,7 @@ import uuid
 from ckan import logic
 
 from dcor_shared import (
-    get_dc_instance, get_resource_path, s3, sha256sum, wait_for_resource
+    get_dc_instance, s3, sha256sum, wait_for_resource
 )
 
 import pytest
@@ -27,10 +27,8 @@ def test_get_dc_instance_file(enqueue_job_mock):
         activate=True)
 
     rid = ds_dict["resources"][0]["id"]
-    resource_path = pathlib.Path(get_resource_path(rid))
-    assert resource_path.exists(), "sanity check"
     with get_dc_instance(rid) as ds:
-        assert str(ds.path) == str(resource_path)
+        assert len(ds)
 
 
 @pytest.mark.ckan_config('ckan.storage_path',
@@ -59,10 +57,6 @@ def test_get_dc_instance_s3(enqueue_job_mock):
 
     res_dict = ds_dict["resources"][0]
     rid = res_dict["id"]
-    resource_path = pathlib.Path(get_resource_path(rid))
-    # remove the file, so DCOR falls back to the S3 resource
-    resource_path.unlink()
-    assert not resource_path.exists(), "sanity check"
     with get_dc_instance(rid) as ds:
         assert ds.path.startswith("http")
         assert res_dict["s3_available"]
@@ -108,38 +102,6 @@ def test_wait_for_resource_s3(monkeypatch):
                         lambda x: lambda context, data_dict: {
                             "id": res_id,
                             "s3_available": True})
-    # Should not raise an exception
-    wait_for_resource(res_id)
-
-
-@pytest.mark.ckan_config('ckan.plugins', '')  # disable plugins
-def test_wait_for_resource_no_s3_url_no_plugins(monkeypatch):
-    res_id = str(uuid.uuid4())
-    monkeypatch.setattr(logic, "get_action",
-                        lambda x: lambda context, data_dict: {
-                            "id": res_id})
-    # Create the actual path
-    rp = pathlib.Path(get_resource_path(res_id))
-    rp.parent.mkdir(parents=True, exist_ok=True)
-    rp.write_bytes(b"This is not a dummy file, but a fake DC file!")
-    # Should not raise an exception
-    wait_for_resource(res_id)
-
-
-@pytest.mark.ckan_config('ckan.plugins', 'dcor_depot')
-def test_wait_for_resource_no_s3_url_with_dcor_depot_plugin(monkeypatch):
-    res_id = str(uuid.uuid4())
-    monkeypatch.setattr(logic, "get_action",
-                        lambda x: lambda context, data_dict: {
-                            "id": res_id})
-    # Create the actual path
-    rp = pathlib.Path(get_resource_path(res_id))
-    rp.parent.mkdir(parents=True, exist_ok=True)
-    rp.write_bytes(b"This is not a dummy file, but a fake DC file!")
-    rp2 = rp.with_name("test.rtdc")
-    rp.rename(rp2)
-    rp.symlink_to(rp2)
-
     # Should not raise an exception
     wait_for_resource(res_id)
 
