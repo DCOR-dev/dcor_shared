@@ -4,6 +4,7 @@ import pathlib
 import time
 
 from .ckan import get_resource_path
+from . import s3cc
 
 
 #: Content of the dummy file created when importing data.
@@ -68,8 +69,11 @@ def wait_for_resource(resource_id: str,
             continue
 
         s3_ok = res_dict.get("s3_available", None)
-        if s3_ok is not None:
-            # If the dataset is on S3, it is considered to be available.
+        if s3_ok:
+            # If the resource is on S3, it is considered to be available.
+            break
+        elif s3cc.artifact_exists(res_dict["id"]):
+            # It is on S3, but not yet registered. That's fine.
             break
         elif time.time() - t0 > timeout:
             raise OSError("Data import seems to take too long "

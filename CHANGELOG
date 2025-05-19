@@ -1,3 +1,5 @@
+0.12.3
+ - enh: improved resource availability check
 0.12.2
  - fix: testing did not append S3 resources
 0.12.1
