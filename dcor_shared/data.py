@@ -59,14 +59,21 @@ def wait_for_resource(resource_id: str,
             time.sleep(5)
             continue
 
+        # object exists in database?
         s3_ok = res_dict.get("s3_available", None)
         if s3_ok:
             # If the resource is on S3, it is considered to be available.
             break
-        elif s3cc.artifact_exists(res_dict["id"]):
-            # It is on S3, but not yet registered. That's fine.
+
+        # object exists on S3?
+        try:
+            s3_exist = s3cc.artifact_exists(res_dict["id"])
+        except BaseException:
+            s3_exist = False
+        if s3_exist:
             break
-        elif time.time() - t0 > timeout:
+
+        if time.time() - t0 > timeout:
             raise OSError("Data import seems to take too long "
                           "for '{}'!".format(path))
         elif not path.exists():
