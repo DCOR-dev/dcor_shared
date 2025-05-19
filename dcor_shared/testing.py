@@ -229,7 +229,7 @@ def make_resource_via_s3(
     bucket_name = get_ckan_config_option(
         "dcor_object_store.bucket_name").format(
         organization_id=organization_id)
-    rid = str(uuid.uuid4())
+    rid = str(uuid.uuid1())
     object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
 
     s3.upload_file(bucket_name=bucket_name,

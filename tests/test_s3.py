@@ -16,8 +16,8 @@ data_path = pathlib.Path(__file__).parent / "data"
 
 def test_compute_checksum():
     path = data_path / "calibration_beads_47.rtdc"
-    bucket_name = f"test-circle-{uuid.uuid4()}"
-    rid = str(uuid.uuid4())
+    bucket_name = f"test-circle-{uuid.uuid1()}"
+    rid = str(uuid.uuid1())
     object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
     s3.upload_file(
         bucket_name=bucket_name,
@@ -33,7 +33,7 @@ def test_compute_checksum():
 
 
 def test_create_bucket_again():
-    bucket_name = f"test-circle-{uuid.uuid4()}"
+    bucket_name = f"test-circle-{uuid.uuid1()}"
     bucket = s3.require_bucket(bucket_name)
     # this is cached
     bucket2 = s3.require_bucket(bucket_name)
@@ -45,8 +45,8 @@ def test_create_bucket_again():
 
 def test_make_object_public(tmp_path):
     path = data_path / "calibration_beads_47.rtdc"
-    bucket_name = f"test-circle-{uuid.uuid4()}"
-    rid = str(uuid.uuid4())
+    bucket_name = f"test-circle-{uuid.uuid1()}"
+    rid = str(uuid.uuid1())
     object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
     s3_url = s3.upload_file(
         bucket_name=bucket_name,
@@ -73,8 +73,8 @@ def test_make_object_public(tmp_path):
 
 def test_make_object_public_no_such_key(tmp_path):
     path = data_path / "calibration_beads_47.rtdc"
-    bucket_name = f"test-circle-{uuid.uuid4()}"
-    rid = str(uuid.uuid4())
+    bucket_name = f"test-circle-{uuid.uuid1()}"
+    rid = str(uuid.uuid1())
     object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
     s3_url = s3.upload_file(
         bucket_name=bucket_name,
@@ -100,8 +100,8 @@ def test_make_object_public_no_such_key(tmp_path):
 
 def test_object_exists():
     path = data_path / "calibration_beads_47.rtdc"
-    bucket_name = f"test-circle-{uuid.uuid4()}"
-    rid = str(uuid.uuid4())
+    bucket_name = f"test-circle-{uuid.uuid1()}"
+    rid = str(uuid.uuid1())
     object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
     s3.upload_file(
         bucket_name=bucket_name,
@@ -114,15 +114,15 @@ def test_object_exists():
                             object_name=object_name)
     # sanity checks
     assert not s3.object_exists(bucket_name=bucket_name,
-                                object_name=f"peter/pan-{uuid.uuid4()}")
-    assert not s3.object_exists(bucket_name=f"hansgunter-{uuid.uuid4()}",
+                                object_name=f"peter/pan-{uuid.uuid1()}")
+    assert not s3.object_exists(bucket_name=f"hansgunter-{uuid.uuid1()}",
                                 object_name=object_name)
 
 
 def test_presigned_url(tmp_path):
     path = data_path / "calibration_beads_47.rtdc"
-    bucket_name = f"test-circle-{uuid.uuid4()}"
-    rid = str(uuid.uuid4())
+    bucket_name = f"test-circle-{uuid.uuid1()}"
+    rid = str(uuid.uuid1())
     object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
     s3_url = s3.upload_file(
         bucket_name=bucket_name,
@@ -185,8 +185,8 @@ def test_presigned_upload():
 
     # This is what would happen on the server when DCOR-Aid requests an
     # upload URL
-    bucket_name = f"test-circle-{uuid.uuid4()}"
-    rid = str(uuid.uuid4())
+    bucket_name = f"test-circle-{uuid.uuid1()}"
+    rid = str(uuid.uuid1())
     object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
     upload_urls, complete_url = s3.create_presigned_upload_urls(
         bucket_name=bucket_name,
@@ -220,8 +220,8 @@ def test_presigned_upload_multipart(tmp_path):
 
     # This is what would happen on the server when DCOR-Aid requests an
     # upload URL
-    bucket_name = f"test-circle-{uuid.uuid4()}"
-    rid = str(uuid.uuid4())
+    bucket_name = f"test-circle-{uuid.uuid1()}"
+    rid = str(uuid.uuid1())
     object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
     upload_urls, complete_url = s3.create_presigned_upload_urls(
         bucket_name=bucket_name,
@@ -256,8 +256,8 @@ def test_presigned_upload_private_by_default():
 
     # This is what would happen on the server when DCOR-Aid requests an
     # upload URL
-    bucket_name = f"test-circle-{uuid.uuid4()}"
-    rid = str(uuid.uuid4())
+    bucket_name = f"test-circle-{uuid.uuid1()}"
+    rid = str(uuid.uuid1())
     object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
 
     upload_urls, complete_url = s3.create_presigned_upload_urls(
@@ -292,8 +292,8 @@ def test_presigned_upload_wrong_access():
 
     # This is what would happen on the server when DCOR-Aid requests an
     # upload URL
-    bucket_name = f"test-circle-{uuid.uuid4()}"
-    rid = str(uuid.uuid4())
+    bucket_name = f"test-circle-{uuid.uuid1()}"
+    rid = str(uuid.uuid1())
     object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
 
     upload_urls, complete_url = s3.create_presigned_upload_urls(
@@ -330,8 +330,8 @@ def test_presigned_upload_wrong_key():
 
     # This is what would happen on the server when DCOR-Aid requests an
     # upload URL
-    bucket_name = f"test-circle-{uuid.uuid4()}"
-    rid = str(uuid.uuid4())
+    bucket_name = f"test-circle-{uuid.uuid1()}"
+    rid = str(uuid.uuid1())
     object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
 
     upload_urls, complete_url = s3.create_presigned_upload_urls(
@@ -345,7 +345,7 @@ def test_presigned_upload_wrong_key():
 
     # Try to upload the file under a different object name
     # (this tests the S3 access restrictions)
-    rid2 = str(uuid.uuid4())
+    rid2 = str(uuid.uuid1())
     object_name_bad = f"resource/{rid2[:3]}/{rid2[3:6]}/{rid2[6:]}"
     # replace the old with the bad object name
     upload_urls[0] = upload_urls[0].replace(object_name, object_name_bad)
@@ -375,8 +375,8 @@ def test_upload_override(tmp_path):
     # sanity check
     assert sha256sum(path1) != sha256sum(path2)
     # Proceed as in the other tests
-    bucket_name = f"test-circle-{uuid.uuid4()}"
-    rid = str(uuid.uuid4())
+    bucket_name = f"test-circle-{uuid.uuid1()}"
+    rid = str(uuid.uuid1())
     object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
 
     # Original file
@@ -432,8 +432,8 @@ def test_upload_large_file(tmp_path):
         for ii in range(100):
             fd.write(b"0123456789"*100000)
     # Proceed as in the other tests
-    bucket_name = f"test-circle-{uuid.uuid4()}"
-    rid = str(uuid.uuid4())
+    bucket_name = f"test-circle-{uuid.uuid1()}"
+    rid = str(uuid.uuid1())
     object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
     s3_url = s3.upload_file(
         bucket_name=bucket_name,
@@ -453,8 +453,8 @@ def test_upload_large_file(tmp_path):
 
 def test_upload_private(tmp_path):
     path = data_path / "calibration_beads_47.rtdc"
-    bucket_name = f"test-circle-{uuid.uuid4()}"
-    rid = str(uuid.uuid4())
+    bucket_name = f"test-circle-{uuid.uuid1()}"
+    rid = str(uuid.uuid1())
     object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
     s3_url = s3.upload_file(
         bucket_name=bucket_name,
@@ -470,8 +470,8 @@ def test_upload_private(tmp_path):
 
 def test_upload_public(tmp_path):
     path = data_path / "calibration_beads_47.rtdc"
-    bucket_name = f"test-circle-{uuid.uuid4()}"
-    rid = str(uuid.uuid4())
+    bucket_name = f"test-circle-{uuid.uuid1()}"
+    rid = str(uuid.uuid1())
     object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
     s3_url = s3.upload_file(
         bucket_name=bucket_name,
@@ -491,8 +491,8 @@ def test_upload_public(tmp_path):
 
 def test_upload_wrong_sha256():
     path = data_path / "calibration_beads_47.rtdc"
-    bucket_name = f"test-circle-{uuid.uuid4()}"
-    rid = str(uuid.uuid4())
+    bucket_name = f"test-circle-{uuid.uuid1()}"
+    rid = str(uuid.uuid1())
     object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
     with pytest.raises(ValueError, match="Checksum mismatch"):
         s3.upload_file(
