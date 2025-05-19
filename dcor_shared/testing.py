@@ -8,6 +8,7 @@ import uuid
 import warnings
 
 import ckan.authz
+import ckan.model
 import ckan.tests.factories as factories
 import ckan.tests.helpers as helpers
 from ckan.tests.pytest_ckan.fixtures import FakeFileStorage
@@ -134,7 +135,9 @@ def make_dataset_via_s3(
     """
     if create_context is None:
         user = factories.User()
+        user_obj = ckan.model.User.by_name(user["name"])
         create_context = {'ignore_auth': False,
+                          'auth_user_obj': user_obj,
                           'user': user['name'],
                           'api_version': 3}
         user_id = user["id"]
