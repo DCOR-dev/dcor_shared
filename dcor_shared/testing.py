@@ -239,12 +239,11 @@ def make_resource_via_s3(
 
     revise_dict = {
         "match": {"id": dataset_id},
-        "update": {"resources": [{"id": rid,
-                                  "name": resource_path.name,
-                                  "s3_available": True,
-                                  }
-                                 ]
-                   }
+        f"update__resources__extend":{
+            "id": rid,
+            "name": resource_path.name,
+            "s3_available": True,
+            }
         }
     helpers.call_action("package_revise", create_context, **revise_dict)
     if ret_dict:
