@@ -1,3 +1,5 @@
+0.12.2
+ - fix: testing did not append S3 resources
 0.12.1
  - ci: migrate to docker
  - ref: deprecate `get_resource_path`, `make_dataset`, `make_resource`
