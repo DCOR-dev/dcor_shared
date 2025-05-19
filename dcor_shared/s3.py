@@ -14,7 +14,7 @@ import boto3
 import botocore.exceptions
 
 from .ckan import get_ckan_config_option
-from .data import sha256sum
+from .util import sha256sum
 
 
 def compute_checksum(bucket_name, object_name, max_size=None):

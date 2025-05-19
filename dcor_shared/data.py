@@ -1,23 +1,14 @@
 import functools
-import hashlib
 import pathlib
 import time
 
 from .ckan import get_resource_path
 from . import s3cc
+from .util import sha256sum  # noqa: F401
 
 
 #: Content of the dummy file created when importing data.
 DUMMY_BYTES = b"[Data import pending]"
-
-
-def sha256sum(path):
-    """Compute the SHA256 hash of a file in 1MB chunks"""
-    file_hash = hashlib.sha256()
-    with open(path, "rb") as fd:
-        while data := fd.read(2 ** 20):
-            file_hash.update(data)
-    return file_hash.hexdigest()
 
 
 @functools.lru_cache(maxsize=100)

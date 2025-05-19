@@ -151,7 +151,7 @@ def make_dataset_via_s3(
             users=[{
                 'name': user_id,
                 'capacity': 'admin'
-        }])
+            }])
 
     if "title" not in kwargs:
         kwargs["title"] = "test-dataset-S3"
