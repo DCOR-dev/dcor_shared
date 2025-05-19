@@ -168,7 +168,6 @@ def make_dataset_via_s3(
         rid = make_resource_via_s3(resource_path=resource_path,
                                    organization_id=owner_org["id"],
                                    dataset_id=ds_dict["id"],
-                                   create_context=create_context,
                                    private=ds_dict.get("private", False)
                                    )
     else:
@@ -212,9 +211,19 @@ def make_resource_via_s3(
         resource_path: pathlib.Path | str,
         organization_id: str,
         dataset_id: str,
-        create_context: Dict,
+        create_context: Dict = None,
         private: bool = False):
     """Upload a resource to S3 and register it with CKAN"""
+    if create_context is not None:
+        warnings.warn("Create context has no effect for creating resources "
+                      f"via S3 for testing (got {create_context})",
+                      DeprecationWarning)
+
+    user = factories.Sysadmin()
+    create_context = {'ignore_auth': False,
+                      'user': user['name'],
+                      'api_version': 3}
+
     bucket_name = get_ckan_config_option(
         "dcor_object_store.bucket_name").format(
         organization_id=organization_id)
