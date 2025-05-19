@@ -212,7 +212,9 @@ def make_resource_via_s3(
         organization_id: str,
         dataset_id: str,
         create_context: Dict = None,
-        private: bool = False):
+        private: bool = False,
+        ret_dict: bool = False,
+        ):
     """Upload a resource to S3 and register it with CKAN"""
     if create_context is not None:
         warnings.warn("Create context has no effect for creating resources "
@@ -245,7 +247,11 @@ def make_resource_via_s3(
                    }
         }
     helpers.call_action("package_revise", create_context, **revise_dict)
-    return rid
+    if ret_dict:
+        res_dict = helpers.call_action("resource_show", id=rid_text)
+        return res_dict
+    else:
+        return rid
 
 
 def synchronous_enqueue_job(job_func, args=None, kwargs=None, title=None,
