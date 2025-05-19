@@ -38,7 +38,7 @@ def test_get_dc_instance_file_fails_without_actual_resource():
     atexit.register(shutil.rmtree,
                     tmp_path,
                     ignore_errors=True)
-    rid = str(uuid.uuid1())
+    rid = str(uuid.uuid4())
     resource_path = tmp_path / rid[:3] / rid[3:6] / rid[6:]
     resource_path.parent.mkdir(parents=True)
     shutil.copy2(data_path / "calibration_beads_47.rtdc", resource_path)
@@ -75,7 +75,7 @@ def test_get_dc_instance_s3_fails_without_actual_resource(enqueue_job_mock):
         'name': user['id'],
         'capacity': 'admin'
     }])
-    rid = str(uuid.uuid1())
+    rid = str(uuid.uuid4())
     bucket_name = f"circle-{owner_org['id']}"
     object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
     upload_path = data_path / "calibration_beads_47.rtdc"
@@ -97,7 +97,7 @@ def test_sha256sum(tmp_path):
 
 
 def test_wait_for_resource_s3(monkeypatch):
-    res_id = str(uuid.uuid1())
+    res_id = str(uuid.uuid4())
     monkeypatch.setattr(logic, "get_action",
                         lambda x: lambda context, data_dict: {
                             "id": res_id,
@@ -107,7 +107,7 @@ def test_wait_for_resource_s3(monkeypatch):
 
 
 def test_wait_resource_not_available(monkeypatch):
-    res_id = str(uuid.uuid1())
+    res_id = str(uuid.uuid4())
     monkeypatch.setattr(logic, "get_action",
                         lambda x: lambda context, data_dict: {
                             "id": res_id})
