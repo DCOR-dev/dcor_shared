@@ -239,7 +239,7 @@ def make_resource_via_s3(
 
     revise_dict = {
         "match": {"id": dataset_id},
-        f"update__resources__extend":{
+        "update__resources__extend": {
             "id": rid,
             "name": resource_path.name,
             "s3_available": True,
