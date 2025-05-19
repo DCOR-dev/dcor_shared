@@ -147,9 +147,10 @@ def make_dataset_via_s3(
             create_context["user"], allow_none=True)
 
     if owner_org is None:
-        owner_org = factories.Organization(users=[{
-            'name': user_id,
-            'capacity': 'admin'
+        owner_org = factories.Organization(
+            users=[{
+                'name': user_id,
+                'capacity': 'admin'
         }])
 
     if "title" not in kwargs:
