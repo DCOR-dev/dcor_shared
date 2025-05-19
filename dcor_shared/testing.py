@@ -248,7 +248,7 @@ def make_resource_via_s3(
         }
     helpers.call_action("package_revise", create_context, **revise_dict)
     if ret_dict:
-        res_dict = helpers.call_action("resource_show", id=rid_text)
+        res_dict = helpers.call_action("resource_show", id=rid)
         return res_dict
     else:
         return rid
