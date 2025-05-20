@@ -2,6 +2,8 @@
  - feat: add `is_resource_private` method
  - enh: add "artifact" kwarg to `get_s3_dc_handle`
  - enh: partial resource ID in basin names for `get_s3_dc_handle_basin_based`
+ - enh: add "perishable" key for basins in `get_s3_dc_handle_basin_based`
+ - setup: bump dclab to 0.64.0
 0.12.3
  - enh: improved resource availability check
 0.12.2

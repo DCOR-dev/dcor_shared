@@ -48,4 +48,4 @@ def test_is_resource_private(private):
         resource_path=data_path / "calibration_beads_47.rtdc",
         private=private,
         activate=True)
-    assert is_resource_private(res_dict["id"])
+    assert is_resource_private(res_dict["id"]) == private

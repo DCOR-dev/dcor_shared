@@ -218,8 +218,9 @@ def get_s3_dc_handle_basin_based(resource_id):
     """
     artifacts = ["resource", "condensed"]
     basin_paths = []
+    private = is_resource_private(resource_id)
     for artifact in artifacts:
-        if is_resource_private(resource_id):
+        if private:
             bp = create_presigned_url(resource_id, artifact=artifact)
         else:
             bp = get_s3_url_for_artifact(resource_id, artifact=artifact)
@@ -241,6 +242,7 @@ def get_s3_dc_handle_basin_based(resource_id):
                 # Don't verify anything. This would only cost time,
                 # and we know these objects exist.
                 verify=False,
+                perishable=private,
                 )
     ds = fmt_hdf5.RTDC_HDF5(fd)
     return ds

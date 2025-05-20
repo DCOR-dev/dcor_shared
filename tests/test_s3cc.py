@@ -171,7 +171,7 @@ def test_get_s3_handle(enqueue_job_mock):
         assert len(ds) == 47
 
 
-@pytest.mark.ckan_config('ckan.plugins', 'dcor_schemas')
+@pytest.mark.ckan_config('ckan.plugins', 'dcor_schemas dc_serve')
 @pytest.mark.usefixtures('clean_db', 'with_request_context')
 @mock.patch('ckan.plugins.toolkit.enqueue_job',
             side_effect=synchronous_enqueue_job)
