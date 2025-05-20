@@ -255,7 +255,7 @@ def test_get_s3_dc_handle_basin_based_private_urls(enqueue_job_mock, tmp_path):
 
     _, res_dict = make_dataset_via_s3(
         resource_path=resource_path,
-        private=False,
+        private=True,
         activate=True)
     rid = res_dict["id"]
 
