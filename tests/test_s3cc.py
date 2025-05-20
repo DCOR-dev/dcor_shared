@@ -20,7 +20,9 @@ import requests
 data_path = pathlib.Path(__file__).parent / "data"
 
 
-def setup_s3_resource_on_ckan(private=False, resource_path=None):
+def setup_s3_resource_on_ckan(private: bool = False,
+                              resource_path: str | pathlib.Path = None
+                              ):
     """Create an S3 resource in CKAN"""
     if resource_path is None:
         resource_path = data_path / "calibration_beads_47.rtdc"
@@ -34,7 +36,9 @@ def setup_s3_resource_on_ckan(private=False, resource_path=None):
     }])
 
     test_context = {'ignore_auth': False,
-                    'user': user['name'], 'model': model, 'api_version': 3}
+                    'user': user['name'],
+                    'model': model,
+                    'api_version': 3}
 
     # Upload the resource to S3 (note that it is not required that the
     # dataset exists)
@@ -171,8 +175,13 @@ def test_get_s3_handle(enqueue_job_mock):
 @pytest.mark.usefixtures('clean_db', 'with_request_context')
 @mock.patch('ckan.plugins.toolkit.enqueue_job',
             side_effect=synchronous_enqueue_job)
-def test_get_s3_handle_condensed(enqueue_job_mock):
-    rid, _, _, _ = setup_s3_resource_on_ckan()
+def test_get_s3_handle_condensed(enqueue_job_mock, tmp_path):
+    resource_path = tmp_path / "data.rtdc"
+    shutil.copy2(data_path / "calibration_beads_47.rtdc", resource_path)
+    _, res_dict = make_dataset_via_s3(
+        resource_path=resource_path,
+        activate=True)
+    rid = res_dict["id"]
     expected_path = s3cc.get_s3_url_for_artifact(rid, artifact="condensed")
     with s3cc.get_s3_dc_handle(rid, artifact="condensed") as ds:
         assert ds.path == expected_path
@@ -228,7 +237,7 @@ def test_get_s3_dc_handle_basin_based_public_urls(enqueue_job_mock, tmp_path):
 
     with s3cc.get_s3_dc_handle_basin_based(rid) as ds:
         # get the basins
-        for bn_dict in ds.basins_get_dicts:
+        for bn_dict in ds.basins_get_dicts():
             assert not bn_dict["perishable"]
             for url in bn_dict["urls"]:
                 assert not url.lower().count("expires")
@@ -252,7 +261,7 @@ def test_get_s3_dc_handle_basin_based_private_urls(enqueue_job_mock, tmp_path):
 
     with s3cc.get_s3_dc_handle_basin_based(rid) as ds:
         # get the basins
-        for bn_dict in ds.basins_get_dicts:
+        for bn_dict in ds.basins_get_dicts():
             assert bn_dict["perishable"]
             for url in bn_dict["urls"]:
                 assert url.lower().count("expires")
