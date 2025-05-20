@@ -167,6 +167,18 @@ def test_get_s3_handle(enqueue_job_mock):
         assert len(ds) == 47
 
 
+@pytest.mark.ckan_config('ckan.plugins', 'dcor_schemas')
+@pytest.mark.usefixtures('clean_db', 'with_request_context')
+@mock.patch('ckan.plugins.toolkit.enqueue_job',
+            side_effect=synchronous_enqueue_job)
+def test_get_s3_handle_condensed(enqueue_job_mock):
+    rid, _, _, _ = setup_s3_resource_on_ckan()
+    expected_path = s3cc.get_s3_url_for_artifact(rid, artifact="condensed")
+    with s3cc.get_s3_dc_handle(rid, artifact="condensed") as ds:
+        assert ds.path == expected_path
+        assert len(ds) == 47
+
+
 @pytest.mark.ckan_config('ckan.plugins', 'dcor_depot dcor_schemas dc_serve')
 @pytest.mark.usefixtures('clean_db', 'with_request_context')
 @mock.patch('ckan.plugins.toolkit.enqueue_job',
@@ -196,6 +208,54 @@ def test_get_s3_dc_handle_basin_based(enqueue_job_mock, tmp_path):
         assert "volume" not in ds2.features_innate
         assert "image" in ds2
         assert len(ds2) == 47
+
+
+@pytest.mark.ckan_config('ckan.plugins', 'dcor_depot dcor_schemas dc_serve')
+@pytest.mark.usefixtures('clean_db', 'with_request_context')
+@mock.patch('ckan.plugins.toolkit.enqueue_job',
+            side_effect=synchronous_enqueue_job)
+def test_get_s3_dc_handle_basin_based_public_urls(enqueue_job_mock, tmp_path):
+    resource_path = tmp_path / "data.rtdc"
+    shutil.copy2(data_path / "calibration_beads_47.rtdc", resource_path)
+    with h5py.File(resource_path, "a") as h5:
+        del h5["events/volume"]
+
+    _, res_dict = make_dataset_via_s3(
+        resource_path=resource_path,
+        private=False,
+        activate=True)
+    rid = res_dict["id"]
+
+    with s3cc.get_s3_dc_handle_basin_based(rid) as ds:
+        # get the basins
+        for bn_dict in ds.basins_get_dicts:
+            assert not bn_dict["perishable"]
+            for url in bn_dict["urls"]:
+                assert not url.lower().count("expires")
+
+
+@pytest.mark.ckan_config('ckan.plugins', 'dcor_depot dcor_schemas dc_serve')
+@pytest.mark.usefixtures('clean_db', 'with_request_context')
+@mock.patch('ckan.plugins.toolkit.enqueue_job',
+            side_effect=synchronous_enqueue_job)
+def test_get_s3_dc_handle_basin_based_private_urls(enqueue_job_mock, tmp_path):
+    resource_path = tmp_path / "data.rtdc"
+    shutil.copy2(data_path / "calibration_beads_47.rtdc", resource_path)
+    with h5py.File(resource_path, "a") as h5:
+        del h5["events/volume"]
+
+    _, res_dict = make_dataset_via_s3(
+        resource_path=resource_path,
+        private=False,
+        activate=True)
+    rid = res_dict["id"]
+
+    with s3cc.get_s3_dc_handle_basin_based(rid) as ds:
+        # get the basins
+        for bn_dict in ds.basins_get_dicts:
+            assert bn_dict["perishable"]
+            for url in bn_dict["urls"]:
+                assert url.lower().count("expires")
 
 
 @pytest.mark.ckan_config('ckan.plugins', 'dcor_schemas')

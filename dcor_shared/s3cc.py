@@ -8,7 +8,6 @@ import io
 import functools
 import pathlib
 from typing import Literal
-from urllib.parse import urlparse
 import warnings
 
 import dclab
@@ -16,7 +15,8 @@ from dclab.rtdc_dataset import fmt_hdf5, fmt_s3
 import h5py
 
 from .ckan import (
-    get_ckan_config_option, get_resource_dc_config, get_resource_info
+    get_ckan_config_option, get_resource_dc_config, get_resource_info,
+    is_resource_private
 )
 
 from . import s3
@@ -169,7 +169,9 @@ def get_s3_bucket_name_for_resource(resource_id):
     return bucket_name
 
 
-def get_s3_dc_handle(resource_id):
+def get_s3_dc_handle(
+        resource_id: str,
+        artifact: Literal["condensed", "preview", "resource"] = "resource"):
     """Return an instance of :class:`RTDC_S3`
 
     The data are accessed directly via S3 using DCOR's access credentials.
@@ -178,7 +180,7 @@ def get_s3_dc_handle(resource_id):
     The resource with the identifier `resource_id` must exist in the
     CKAN database.
     """
-    s3_url = get_s3_url_for_artifact(resource_id)
+    s3_url = get_s3_url_for_artifact(resource_id, artifact=artifact)
     ds = fmt_s3.RTDC_S3(
         url=s3_url,
         access_key_id=get_ckan_config_option(
@@ -203,11 +205,21 @@ def get_s3_dc_handle_basin_based(resource_id):
     that initialization takes slightly longer and that, if private
     resources are accessed, the presigned URLs in the basins are only
     valid for a fixed time period.
+
+    Parameters
+    ----------
+    resource_id : str
+        CKAN resource identifier
+
+    Returns
+    -------
+    ds: RTDCBase
+        basin-based dclab dataset
     """
-    ds_dict, res_dict = get_resource_info(resource_id)
+    artifacts = ["resource", "condensed"]
     basin_paths = []
-    for artifact in ["resource", "condensed"]:
-        if ds_dict["private"]:
+    for artifact in artifacts:
+        if is_resource_private(resource_id):
             bp = create_presigned_url(resource_id, artifact=artifact)
         else:
             bp = get_s3_url_for_artifact(resource_id, artifact=artifact)
@@ -220,10 +232,9 @@ def get_s3_dc_handle_basin_based(resource_id):
         hv.require_group("events")
         hw = dclab.RTDCWriter(hv)
         hw.store_metadata(get_resource_dc_config(resource_id))
-        for bp in basin_paths:
-            urlp = urlparse(bp)  # e.g. http://localhost/bucket/resource/id
+        for bp, artifact in zip(basin_paths, artifacts):
             hw.store_basin(
-                basin_name=urlp.path.split("/")[2],  # e.g. "resource"
+                basin_name=f"{artifact}-{resource_id[:5]}",  # "resource-92a12"
                 basin_format="http",
                 basin_type="remote",
                 basin_locs=[bp],
@@ -231,7 +242,8 @@ def get_s3_dc_handle_basin_based(resource_id):
                 # and we know these objects exist.
                 verify=False,
                 )
-    return fmt_hdf5.RTDC_HDF5(fd)
+    ds = fmt_hdf5.RTDC_HDF5(fd)
+    return ds
 
 
 def get_s3_url_for_artifact(

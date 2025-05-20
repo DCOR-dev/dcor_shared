@@ -95,3 +95,11 @@ def get_resource_path(resource_id, create_dirs=False):
         except OSError:
             pass
     return pathlib.Path(path)
+
+
+def is_resource_private(resource_id):
+    """Return true if a resource is private"""
+    from ckan import model
+    resource = model.Resource.get(resource_id)
+    dataset = model.Package.get(resource.package_id)
+    return dataset.private
