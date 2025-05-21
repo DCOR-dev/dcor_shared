@@ -1,4 +1,7 @@
 0.13.0
+ - BREAKING: remove `get_resource_path`, `get_dcor_depot_path`,
+   `get_dcor_users_depot_path`
+ - BREAKING: `wait_for_resource` and `get_dc_instance` now only check S3 data
  - feat: add `is_resource_private` method
  - enh: add "artifact" kwarg to `get_s3_dc_handle`
  - enh: partial resource ID in basin names for `get_s3_dc_handle_basin_based`
