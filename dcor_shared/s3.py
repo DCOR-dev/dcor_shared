@@ -11,6 +11,7 @@ from typing import List, Tuple
 import warnings
 
 import boto3
+from botocore.config import Config
 import botocore.exceptions
 
 from .ckan import get_ckan_config_option
@@ -305,6 +306,9 @@ def get_s3():
         use_ssl=ssl_verify,
         verify=ssl_verify,
         endpoint_url=get_ckan_config_option("dcor_object_store.endpoint_url"),
+        # https://github.com/boto/boto3/issues/4400#issuecomment-2600742103
+        config=Config(request_checksum_calculation="when_required",
+                      response_checksum_validation="when_required")
     )
     s3_resource = s3_session.resource(
         service_name="s3",
@@ -493,7 +497,6 @@ def upload_file(bucket_name, object_name, path, sha256=None, private=True,
 
     path_size = pathlib.Path(path).stat().st_size
     s3_client, _, _ = get_s3()
-    s3_bucket = require_bucket(bucket_name)
 
     perform_upload = True
     if not override:
@@ -501,7 +504,8 @@ def upload_file(bucket_name, object_name, path, sha256=None, private=True,
                                            object_name=object_name)
 
     if perform_upload:
-        s3_bucket.upload_file(Filename=str(path),
+        s3_client.upload_file(Filename=str(path),
+                              Bucket=bucket_name,
                               Key=object_name,
                               # ExtraArgs={
                               # # verification of the upload (breaks OpenStack)
