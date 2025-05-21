@@ -497,6 +497,7 @@ def upload_file(bucket_name, object_name, path, sha256=None, private=True,
 
     path_size = pathlib.Path(path).stat().st_size
     s3_client, _, _ = get_s3()
+    require_bucket(bucket_name)
 
     perform_upload = True
     if not override:
