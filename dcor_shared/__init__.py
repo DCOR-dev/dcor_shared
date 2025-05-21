@@ -1,6 +1,6 @@
 # flake8: noqa: F401
 from .ckan import (
-    get_ckan_config_option, get_resource_dc_config,
+    get_ckan_config_option, get_ckan_storage_path, get_resource_dc_config,
     get_resource_info, is_resource_private
 )
 from .data import wait_for_resource
