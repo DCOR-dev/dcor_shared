@@ -47,8 +47,24 @@ def create_presigned_url(
         resource_id: str,
         artifact: Literal["condensed", "preview", "resource"] = "resource",
         expiration: int = 3600,
-        filename: str = None):
+        filename: str = None,
+        ret_expiration: bool = False,
+        ):
     """Create a presigned URL for a given artifact of a CKAN resource
+
+    Parameters
+    ----------
+    resource_id : str
+        ID of the resource
+    artifact:
+        Which artifact to create the presigned URL for
+    expiration:
+        Requested lifetime of the presigned URL (may vary up to 10%)
+    filename:
+        Filename to use so a download agent can save the file under the
+        correct name
+    ret_expiration:
+        Return the absolute expiration time (seconds since epoch)
 
     The resource with the identifier `resource_id` must exist in the
     CKAN database.
@@ -58,7 +74,9 @@ def create_presigned_url(
     return s3.create_presigned_url(bucket_name=bucket_name,
                                    object_name=object_name,
                                    expiration=expiration,
-                                   filename=filename)
+                                   filename=filename,
+                                   ret_expiration=ret_expiration,
+                                   )
 
 
 def get_s3_attributes_for_artifact(

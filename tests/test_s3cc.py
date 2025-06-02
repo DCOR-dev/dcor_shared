@@ -1,5 +1,6 @@
 import pathlib
 import shutil
+import time
 from unittest import mock
 
 import pytest
@@ -121,6 +122,25 @@ def test_create_presigned_url(enqueue_job_mock, tmp_path):
         fd.write(response.content)
     assert sha256sum(dl_path) == \
         "490efdf5d9bb4cd4b2a6bcf2fe54d4dc201c38530140bcb168980bf8bf846c73"
+
+
+@pytest.mark.ckan_config('ckan.plugins', 'dcor_schemas')
+@pytest.mark.usefixtures('clean_db', 'with_request_context')
+@mock.patch('ckan.plugins.toolkit.enqueue_job',
+            side_effect=synchronous_enqueue_job)
+def test_create_presigned_url_expires_at(enqueue_job_mock, tmp_path):
+    rid, _, _, _ = setup_s3_resource_on_ckan(private=True)
+    psurl, expires_at = s3cc.create_presigned_url(rid,
+                                                  ret_expiration=True,
+                                                  expiration=3600)
+    time_created = time.time()
+    response = requests.get(psurl)
+    dl_path = tmp_path / "calbeads.rtdc"
+    with dl_path.open("wb") as fd:
+        fd.write(response.content)
+    assert sha256sum(dl_path) == \
+        "490efdf5d9bb4cd4b2a6bcf2fe54d4dc201c38530140bcb168980bf8bf846c73"
+    assert expires_at > time_created + 3000
 
 
 @pytest.mark.ckan_config('ckan.plugins', 'dcor_schemas')

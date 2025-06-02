@@ -205,7 +205,9 @@ def create_presigned_url(
         bucket_name: str,
         object_name: str,
         expiration: int = 3600,
-        filename: str | None = None):
+        filename: str | None = None,
+        ret_expiration: bool = False,
+        ):
     """Generate a presigned URL to share an S3 object
 
     Parameters
@@ -219,11 +221,15 @@ def create_presigned_url(
     filename: str
         Name of the file as it would appear in the response content
         disposition header sent by the server
+    ret_expiration: bool
+        Return the absolute expiration time (seconds since epoch)
 
     Returns
     -------
     psurl: str
         Presigned URL as string.
+    expiration_time: int, optional
+        Absolute expiration time (seconds since epoch)
 
     Notes
     -----
@@ -237,10 +243,15 @@ def create_presigned_url(
         t0 = now - rest
     else:
         t0 = now - rest + wrap
-    return create_presigned_url_until(bucket_name=bucket_name,
+    expires_at = t0 + expiration
+    purl = create_presigned_url_until(bucket_name=bucket_name,
                                       object_name=object_name,
-                                      expires_at=t0 + expiration,
+                                      expires_at=expires_at,
                                       filename=filename)
+    if ret_expiration:
+        return purl, expires_at
+    else:
+        return purl
 
 
 @functools.lru_cache()
