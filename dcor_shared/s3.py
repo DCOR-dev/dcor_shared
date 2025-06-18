@@ -459,24 +459,26 @@ def prune_multipart_uploads(initiated_before_days: int = 5,
                 data = s3_client.list_multipart_uploads(Bucket=bucket_name)
                 while True:
                     for item in data.get("Uploads", []):
-                        date = item["Initiated"]
-                        date_boundary = (
-                            datetime.datetime.now(date.tzinfo)
-                            - datetime.timedelta(days=initiated_before_days)
-                        )
-                        if date < date_boundary:
-                            # list parts and check whether the bucket matches
-                            try:
-                                part_info = s3_client.list_parts(
-                                    Bucket=bucket_name,
-                                    Key=item["Key"],
-                                    UploadId=item["UploadId"]
-                                    )
-                            except BaseException:
-                                # ignore non-existent upload
-                                pass
-                            else:
-                                if part_info["Bucket"] == bucket_name:
+                        # list parts and check whether the bucket matches
+                        try:
+                            part_info = s3_client.list_parts(
+                                Bucket=bucket_name,
+                                Key=item["Key"],
+                                UploadId=item["UploadId"]
+                            )
+                        except BaseException:
+                            # ignore non-existent (bucket not matching) upload
+                            pass
+                        else:
+                            if part_info["Bucket"] == bucket_name:
+                                # Check datetime
+                                date = item["Initiated"]
+                                date_boundary = (
+                                    datetime.datetime.now(date.tzinfo)
+                                    - datetime.timedelta(
+                                        days=initiated_before_days)
+                                )
+                                if date < date_boundary:
                                     bdict["found"] += 1
                                     if print_progress:
                                         print(f"Found   {item['Key']}",
@@ -485,11 +487,11 @@ def prune_multipart_uploads(initiated_before_days: int = 5,
                                         dict(Bucket=bucket_name,
                                              Key=item["Key"],
                                              UploadId=item["UploadId"]))
-                        else:
-                            if print_progress:
-                                print(f"Ignored {item['Key']}",
-                                      flush=True, end="\r")
-                            bdict["ignored"] += 1
+                                else:
+                                    if print_progress:
+                                        print(f"Ignored {item['Key']}",
+                                              flush=True, end="\r")
+                                    bdict["ignored"] += 1
 
                     if data["IsTruncated"]:
                         data = s3_client.list_multipart_uploads(
