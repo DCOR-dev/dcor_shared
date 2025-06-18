@@ -200,6 +200,8 @@ def create_presigned_upload_urls(
                  HttpMethod='POST',
              )
 
+    print("UPLOADID", upload_id)
+
     return upload_urls, complete_url
 
 
