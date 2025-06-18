@@ -19,6 +19,23 @@ from .ckan import get_ckan_config_option
 from .util import sha256sum
 
 
+def bucket_iter():
+    """Iterator returning all buckets for this DCOR instance"""
+    s3_client, _, _ = get_s3()
+
+    # dcor_object_store.bucket_name
+    bucket_prefix = get_ckan_config_option(
+        "dcor_object_store.bucket_name").format(organization_id="")
+
+    # Iterate over all buckets that match the schema of this DCOR instance.
+    paginator = s3_client.get_paginator('list_buckets')
+    for page in paginator.paginate():
+        for bucket in page['Buckets']:
+            bucket_name = bucket['Name']
+            if bucket_name.startswith(bucket_prefix):
+                yield bucket_name
+
+
 def compute_checksum(bucket_name, object_name, max_size=None):
     """Compute the SHA256 checksum of an S3 object
 
@@ -438,74 +455,62 @@ def prune_multipart_uploads(initiated_before_days: int = 5,
     if print_progress and dry_run:
         print("Starting dry run for pruning multipart uploads")
 
-    # dcor_object_store.bucket_name
-    bucket_prefix = get_ckan_config_option(
-        "dcor_object_store.bucket_name").format(organization_id="")
-
     ret_dict = {}
 
-    # Iterate over all buckets that match the schema of this DCOR instance.
-    paginator = s3_client.get_paginator('list_buckets')
-    for page in paginator.paginate():
-        for bucket in page['Buckets']:
-            bucket_name = bucket['Name']
-            if bucket_name.startswith(bucket_prefix):
-                to_prune = []
-                bdict = {"found": 0,
-                         "ignored": 0
-                         }
-                if print_progress:
-                    print(f"Searching {bucket_name}...", flush=True)
-                data = s3_client.list_multipart_uploads(Bucket=bucket_name)
-                while True:
-                    for item in data.get("Uploads", []):
-                        # list parts and check whether the bucket matches
-                        try:
-                            part_info = s3_client.list_parts(
-                                Bucket=bucket_name,
-                                Key=item["Key"],
-                                UploadId=item["UploadId"]
-                            )
-                        except BaseException:
-                            # ignore non-existent (bucket not matching) upload
-                            pass
+    for bucket_name in bucket_iter():
+        to_prune = []
+        bdict = {"found": 0,
+                 "ignored": 0
+                 }
+        if print_progress:
+            print(f"Searching {bucket_name}...", flush=True)
+        data = s3_client.list_multipart_uploads(Bucket=bucket_name)
+        while True:
+            for item in data.get("Uploads", []):
+                # list parts and check whether the bucket matches
+                try:
+                    part_info = s3_client.list_parts(
+                        Bucket=bucket_name,
+                        Key=item["Key"],
+                        UploadId=item["UploadId"]
+                    )
+                except BaseException:
+                    # ignore non-existent (bucket not matching) upload
+                    pass
+                else:
+                    if part_info["Bucket"] == bucket_name:
+                        # Check datetime
+                        date = item["Initiated"]
+                        date_boundary = (
+                            datetime.datetime.now(date.tzinfo)
+                            - datetime.timedelta(days=initiated_before_days))
+                        if date < date_boundary:
+                            bdict["found"] += 1
+                            if print_progress:
+                                print(f"Found   {item['Key']}",
+                                      flush=True, end="\r")
+                            to_prune.append(dict(Bucket=bucket_name,
+                                                 Key=item["Key"],
+                                                 UploadId=item["UploadId"]))
                         else:
-                            if part_info["Bucket"] == bucket_name:
-                                # Check datetime
-                                date = item["Initiated"]
-                                date_boundary = (
-                                    datetime.datetime.now(date.tzinfo)
-                                    - datetime.timedelta(
-                                        days=initiated_before_days)
-                                )
-                                if date < date_boundary:
-                                    bdict["found"] += 1
-                                    if print_progress:
-                                        print(f"Found   {item['Key']}",
-                                              flush=True, end="\r")
-                                    to_prune.append(
-                                        dict(Bucket=bucket_name,
-                                             Key=item["Key"],
-                                             UploadId=item["UploadId"]))
-                                else:
-                                    if print_progress:
-                                        print(f"Ignored {item['Key']}",
-                                              flush=True, end="\r")
-                                    bdict["ignored"] += 1
+                            if print_progress:
+                                print(f"Ignored {item['Key']}",
+                                      flush=True, end="\r")
+                            bdict["ignored"] += 1
 
-                    if data["IsTruncated"]:
-                        data = s3_client.list_multipart_uploads(
-                            Bucket=bucket_name,
-                            UploadIdMarker=data["NextUploadIdMarker"],
-                            KeyMarker=data["NextKeyMarker"])
-                    else:
-                        break
-                if print_progress and (bdict["found"] or bdict["ignored"]):
-                    print("", flush=True)
-                ret_dict[bucket_name] = bdict
-                if not dry_run:
-                    for prune_dict in to_prune:
-                        s3_client.abort_multipart_upload(**prune_dict)
+            if data["IsTruncated"]:
+                data = s3_client.list_multipart_uploads(
+                    Bucket=bucket_name,
+                    UploadIdMarker=data["NextUploadIdMarker"],
+                    KeyMarker=data["NextKeyMarker"])
+            else:
+                break
+        if print_progress and (bdict["found"] or bdict["ignored"]):
+            print("", flush=True)
+        ret_dict[bucket_name] = bdict
+        if not dry_run:
+            for prune_dict in to_prune:
+                s3_client.abort_multipart_upload(**prune_dict)
     return ret_dict
 
 
