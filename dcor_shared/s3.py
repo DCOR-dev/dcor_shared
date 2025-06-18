@@ -467,14 +467,27 @@ def prune_multipart_uploads(initiated_before_days: int = 5,
                             - datetime.timedelta(days=initiated_before_days)
                         )
                         if date < date_boundary:
-                            bdict["found"] += 1
-                            if print_progress:
-                                print(f"Found   {item['Key']}",
-                                      flush=True, end="\r")
-                                print(item)
-                            to_prune.append(dict(Bucket=bucket_name,
-                                                 Key=item["Key"],
-                                                 UploadId=item["UploadId"]))
+                            # list parts and check whether the bucket matches
+                            try:
+                                part_info = s3_client.list_parts(
+                                    Bucket=bucket_name,
+                                    Key=item["Key"],
+                                    UploadId=item["UploadId"]
+                                    )
+                            except BaseException:
+                                # ignore non-existent upload
+                                pass
+                            else:
+                                if part_info["Bucket"] == bucket_name:
+                                    bdict["found"] += 1
+                                    print(item)
+                                    if print_progress:
+                                        print(f"Found   {item['Key']}",
+                                              flush=True, end="\r")
+                                    to_prune.append(
+                                        dict(Bucket=bucket_name,
+                                             Key=item["Key"],
+                                             UploadId=item["UploadId"]))
                         else:
                             if print_progress:
                                 print(f"Ignored {item['Key']}",
