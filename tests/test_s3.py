@@ -396,7 +396,7 @@ def test_prune_multipart_uploads():
         print_progress=True,
     )
     assert prune_info[bucket_name]["ignored"] == 0
-    assert prune_info[bucket_name]["found"] > 0
+    assert prune_info[bucket_name]["found"] == 1
 
     print("A")
 
@@ -406,7 +406,7 @@ def test_prune_multipart_uploads():
         dry_run=True,
         print_progress=True,
     )
-    assert prune_info[bucket_name]["ignored"] > 0
+    assert prune_info[bucket_name]["ignored"] == 1
     assert prune_info[bucket_name]["found"] == 0
 
     print("B")
