@@ -1,6 +1,7 @@
 import hashlib
 from unittest import mock
 import pathlib
+import time
 import uuid
 
 import botocore.exceptions
@@ -407,12 +408,17 @@ def test_prune_multipart_uploads():
         initiated_before_days=-1,
     )
 
-    # And test whether that worked:
-    prune_info = s3.prune_multipart_uploads(
-        initiated_before_days=-1,
-    )
-    assert prune_info[bucket_name]["ignored"] == 0
-    assert prune_info[bucket_name]["found"] == 0
+    for ii in range(100):
+        # And test whether that worked:
+        prune_info = s3.prune_multipart_uploads(
+            initiated_before_days=-1,
+        )
+        assert prune_info[bucket_name]["ignored"] == 0
+        if prune_info[bucket_name]["found"] == 0:
+            break
+        time.sleep(0.5)
+    else:
+        assert False, "multipart uploads still there"
 
 
 def test_upload_override(tmp_path):
