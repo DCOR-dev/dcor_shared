@@ -7,7 +7,7 @@ import botocore.exceptions
 import pytest
 import requests
 
-from dcor_shared import s3, sha256sum
+from dcor_shared import s3, sha256sum, get_ckan_config_option
 from dcor_shared.testing import upload_presigned_to_s3
 
 
@@ -370,7 +370,9 @@ def test_prune_multipart_uploads(tmp_path):
         for _ in range(100):
             fd.write(b"0"*1024*1024)
     # Proceed as in the other tests
-    bucket_name = f"test-circle-{uuid.uuid4()}"
+    bucket_name = get_ckan_config_option(
+        "dcor_object_store.bucket_name").format(
+        organization_id=str(uuid.uuid4()))
     rid = str(uuid.uuid4())
     object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
 
