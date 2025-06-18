@@ -363,6 +363,61 @@ def test_presigned_upload_wrong_key():
                             object_name=object_name_bad)
 
 
+def test_prune_multipart_uploads(tmp_path):
+    path = tmp_path / "file1.rtdc"
+    # create a 100MB file
+    with path.open("wb") as fd:
+        for _ in range(100):
+            fd.write(b"0"*1024*1024)
+    # Proceed as in the other tests
+    bucket_name = f"test-circle-{uuid.uuid4()}"
+    rid = str(uuid.uuid4())
+    object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
+
+    upload_urls, complete_url = s3.create_presigned_upload_urls(
+        bucket_name=bucket_name,
+        object_name=object_name,
+        # We want two URLs
+        file_size=1024*1024*1024 * 1.5,
+        expiration=400,
+    )
+
+    # Upload 50MB of data. This is the data we want to prune.
+    # Do *not* finish the multipart upload.
+    requests.put(upload_urls[0],
+                 data=b"0"*1024*1024*50,
+                 timeout=3,
+                 )
+
+    # See whether the multipart upload shows up.
+    prune_info = s3.prune_multipart_uploads(
+        initiated_before_days=-1,
+        dry_run=True,
+    )
+    assert prune_info[bucket_name]["ignored"] == 0
+    assert prune_info[bucket_name]["found"] == 1
+
+    # Do the same thing with time>5days ago
+    prune_info = s3.prune_multipart_uploads(
+        initiated_before_days=5,
+        dry_run=True,
+    )
+    assert prune_info[bucket_name]["ignored"] == 1
+    assert prune_info[bucket_name]["found"] == 0
+
+    # Actually prune
+    s3.prune_multipart_uploads(
+        initiated_before_days=-1,
+    )
+
+    # And test whether that worked:
+    prune_info = s3.prune_multipart_uploads(
+        initiated_before_days=-1,
+    )
+    assert prune_info[bucket_name]["ignored"] == 0
+    assert prune_info[bucket_name]["found"] == 0
+
+
 def test_upload_override(tmp_path):
     path1 = tmp_path / "file1.rtdc"
     path2 = tmp_path / "file2.rtdc"
