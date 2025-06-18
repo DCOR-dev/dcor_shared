@@ -1,5 +1,6 @@
 0.15.0
- - feat: add `s3.bucket_iter`
+ - feat: add `s3.iter_buckets`
+ - feat: add `s3.iter_bucket_objects`
 0.14.0
  - feat: add `s3.prune_multipart_uploads`
 0.13.1

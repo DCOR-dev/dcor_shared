@@ -19,23 +19,6 @@ from .ckan import get_ckan_config_option
 from .util import sha256sum
 
 
-def bucket_iter():
-    """Iterator returning all buckets for this DCOR instance"""
-    s3_client, _, _ = get_s3()
-
-    # dcor_object_store.bucket_name
-    bucket_prefix = get_ckan_config_option(
-        "dcor_object_store.bucket_name").format(organization_id="")
-
-    # Iterate over all buckets that match the schema of this DCOR instance.
-    paginator = s3_client.get_paginator('list_buckets')
-    for page in paginator.paginate():
-        for bucket in page['Buckets']:
-            bucket_name = bucket['Name']
-            if bucket_name.startswith(bucket_prefix):
-                yield bucket_name
-
-
 def compute_checksum(bucket_name, object_name, max_size=None):
     """Compute the SHA256 checksum of an S3 object
 
@@ -357,6 +340,52 @@ def is_available():
     return s3_key_id and s3_secret
 
 
+def iter_buckets():
+    """Iterator returning all buckets for this DCOR instance"""
+    s3_client, _, _ = get_s3()
+
+    # dcor_object_store.bucket_name
+    bucket_prefix = get_ckan_config_option(
+        "dcor_object_store.bucket_name").format(organization_id="")
+
+    # Iterate over all buckets that match the schema of this DCOR instance.
+    paginator = s3_client.get_paginator('list_buckets')
+    for page in paginator.paginate():
+        for bucket in page['Buckets']:
+            bucket_name = bucket['Name']
+            if bucket_name.startswith(bucket_prefix):
+                yield bucket_name
+
+
+def iter_bucket_objects(bucket_name, older_than_days=0):
+    """Return iterator over all objects in a Bucket"""
+    s3_client, _, s3_resource = get_s3()
+    kwargs = {"Bucket": bucket_name,
+              "MaxKeys": 100
+              }
+    while True:
+        try:
+            resp = s3_client.list_objects_v2(**kwargs)
+        except s3_client.exceptions.NoSuchBucket:
+            # Bucket has been deleted in the meantime
+            break
+
+        for obj in resp.get("Contents", []):
+            object_name = obj["Key"]
+            creation_date = obj.get("LastModified", obj.get("CreationDate"))
+            tz = creation_date.tzinfo
+            if creation_date > (datetime.datetime.now(tz=tz)
+                                - datetime.timedelta(days=older_than_days)):
+                # Ignore objects that are younger than `older_than_days`
+                continue
+            yield object_name
+
+        if not resp.get("IsTruncated"):
+            break
+        else:
+            kwargs["ContinuationToken"] = resp.get("NextContinuationToken")
+
+
 def make_object_public(bucket_name, object_name, missing_ok=False):
     """Make an S3 object public by setting the public=true tag
 
@@ -457,7 +486,7 @@ def prune_multipart_uploads(initiated_before_days: int = 5,
 
     ret_dict = {}
 
-    for bucket_name in bucket_iter():
+    for bucket_name in iter_buckets():
         to_prune = []
         bdict = {"found": 0,
                  "ignored": 0
