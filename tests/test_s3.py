@@ -387,6 +387,8 @@ def test_prune_multipart_uploads():
                  timeout=3,
                  )
 
+    time.sleep(1)
+
     # See whether the multipart upload shows up.
     prune_info = s3.prune_multipart_uploads(
         initiated_before_days=-1,
@@ -396,7 +398,7 @@ def test_prune_multipart_uploads():
     assert prune_info[bucket_name]["ignored"] == 0
     assert prune_info[bucket_name]["found"] > 0
 
-    print("")
+    print("A")
 
     # Do the same thing with time>5days ago
     prune_info = s3.prune_multipart_uploads(
@@ -407,15 +409,17 @@ def test_prune_multipart_uploads():
     assert prune_info[bucket_name]["ignored"] > 0
     assert prune_info[bucket_name]["found"] == 0
 
-    print("")
+    print("B")
 
     # Actually prune
-    s3.prune_multipart_uploads(
+    prune_info = s3.prune_multipart_uploads(
         initiated_before_days=-1,
         print_progress=True,
     )
+    assert prune_info[bucket_name]["ignored"] == 0
+    assert prune_info[bucket_name]["found"] == 1
 
-    print("")
+    print("C")
 
     # And test whether that worked:
     prune_info = s3.prune_multipart_uploads(

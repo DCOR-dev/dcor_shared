@@ -492,7 +492,11 @@ def prune_multipart_uploads(initiated_before_days: int = 5,
                 if not dry_run:
                     for prune_dict in to_prune:
                         resp = s3_client.abort_multipart_upload(**prune_dict)
-                        print("PRUNE:", resp)
+                        if resp.get("ResponseMetadata",
+                                    {}).get("HTTPStatusCode", 200) == 204:
+                            # The multipart upload does not exist or has
+                            # already been aborted.
+                            bdict["found"] -= 1
     return ret_dict
 
 
