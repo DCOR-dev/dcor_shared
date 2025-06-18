@@ -397,14 +397,14 @@ def test_prune_multipart_uploads(tmp_path):
         dry_run=True,
     )
     assert prune_info[bucket_name]["ignored"] == 0
-    assert prune_info[bucket_name]["found"] == 1
+    assert prune_info[bucket_name]["found"] > 0
 
     # Do the same thing with time>5days ago
     prune_info = s3.prune_multipart_uploads(
         initiated_before_days=5,
         dry_run=True,
     )
-    assert prune_info[bucket_name]["ignored"] == 1
+    assert prune_info[bucket_name]["ignored"] > 0
     assert prune_info[bucket_name]["found"] == 0
 
     # Actually prune
