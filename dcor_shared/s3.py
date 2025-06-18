@@ -153,6 +153,7 @@ def create_presigned_upload_urls(
                                                Key=object_name)
     upload_id = fields["UploadId"]
 
+    file_size = int(file_size)
     gb = 1024**3
 
     if file_size % gb == 0:

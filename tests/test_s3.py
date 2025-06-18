@@ -378,7 +378,7 @@ def test_prune_multipart_uploads(tmp_path):
         bucket_name=bucket_name,
         object_name=object_name,
         # We want two URLs
-        file_size=1024*1024*1024 * 1.5,
+        file_size=int(1024*1024*1024 * 1.5),
         expiration=400,
     )
 
