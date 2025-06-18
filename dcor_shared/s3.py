@@ -469,6 +469,7 @@ def prune_multipart_uploads(initiated_before_days: int = 5,
                             if print_progress:
                                 print(f"Found   {item['Key']}",
                                       flush=True, end="\r")
+                                print(item)
                             to_prune.append(dict(Bucket=bucket_name,
                                                  Key=item["Key"],
                                                  UploadId=item["UploadId"]))
