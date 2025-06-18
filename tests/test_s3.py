@@ -391,27 +391,37 @@ def test_prune_multipart_uploads():
     prune_info = s3.prune_multipart_uploads(
         initiated_before_days=-1,
         dry_run=True,
+        print_progress=True,
     )
     assert prune_info[bucket_name]["ignored"] == 0
     assert prune_info[bucket_name]["found"] > 0
+
+    print("")
 
     # Do the same thing with time>5days ago
     prune_info = s3.prune_multipart_uploads(
         initiated_before_days=5,
         dry_run=True,
+        print_progress=True,
     )
     assert prune_info[bucket_name]["ignored"] > 0
     assert prune_info[bucket_name]["found"] == 0
 
+    print("")
+
     # Actually prune
     s3.prune_multipart_uploads(
         initiated_before_days=-1,
+        print_progress=True,
     )
+
+    print("")
 
     for ii in range(100):
         # And test whether that worked:
         prune_info = s3.prune_multipart_uploads(
             initiated_before_days=-1,
+            print_progress=True,
         )
         assert prune_info[bucket_name]["ignored"] == 0
         if prune_info[bucket_name]["found"] == 0:
