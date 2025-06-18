@@ -450,6 +450,7 @@ def prune_multipart_uploads(initiated_before_days: int = 5,
         for bucket in page['Buckets']:
             bucket_name = bucket['Name']
             if bucket_name.startswith(bucket_prefix):
+                to_prune = []
                 bdict = {"found": 0,
                          "ignored": 0
                          }
@@ -457,7 +458,7 @@ def prune_multipart_uploads(initiated_before_days: int = 5,
                     print(f"Searching {bucket_name}...", flush=True)
                 data = s3_client.list_multipart_uploads(Bucket=bucket_name)
                 while True:
-                    for item in data["Uploads"]:
+                    for item in data.get("Uploads", []):
                         date = item["Initiated"]
                         date_boundary = (
                             datetime.datetime.now(date.tzinfo)
@@ -468,14 +469,13 @@ def prune_multipart_uploads(initiated_before_days: int = 5,
                             if print_progress:
                                 print(f"Found   {item['Key']}",
                                       flush=True, end="\r")
-                            if not dry_run:
-                                s3_client.abort_multipart_upload(
-                                    Bucket=bucket_name,
-                                    Key=item["Key"],
-                                    UploadId=item["UploadId"])
+                            to_prune.append(dict(Bucket=bucket_name,
+                                                 Key=item["Key"],
+                                                 UploadId=item["UploadId"]))
                         else:
-                            print(f"Ignored {item['Key']}",
-                                  flush=True, end="\r")
+                            if print_progress:
+                                print(f"Ignored {item['Key']}",
+                                      flush=True, end="\r")
                             bdict["ignored"] += 1
 
                     if data["IsTruncated"]:
@@ -488,6 +488,9 @@ def prune_multipart_uploads(initiated_before_days: int = 5,
                 if print_progress and (bdict["found"] or bdict["ignored"]):
                     print("", flush=True)
                 ret_dict[bucket_name] = bdict
+                if not dry_run:
+                    for prune_dict in to_prune:
+                        s3_client.abort_multipart_upload(**prune_dict)
     return ret_dict
 
 

@@ -363,12 +363,7 @@ def test_presigned_upload_wrong_key():
                             object_name=object_name_bad)
 
 
-def test_prune_multipart_uploads(tmp_path):
-    path = tmp_path / "file1.rtdc"
-    # create a 100MB file
-    with path.open("wb") as fd:
-        for _ in range(100):
-            fd.write(b"0"*1024*1024)
+def test_prune_multipart_uploads():
     # Proceed as in the other tests
     bucket_name = get_ckan_config_option(
         "dcor_object_store.bucket_name").format(
