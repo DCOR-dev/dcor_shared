@@ -490,7 +490,8 @@ def prune_multipart_uploads(initiated_before_days: int = 5,
                 ret_dict[bucket_name] = bdict
                 if not dry_run:
                     for prune_dict in to_prune:
-                        s3_client.abort_multipart_upload(**prune_dict)
+                        resp = s3_client.abort_multipart_upload(**prune_dict)
+                        print("PRUNE:", resp)
     return ret_dict
 
 
