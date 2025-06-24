@@ -122,9 +122,11 @@ def make_dataset_via_s3(
     Parameters
     ----------
     create_context: dict
-        CKAN context for creating the dataset
+        CKAN context for creating the dataset; creates new factory user
+        if set to None
     owner_org: dict
-        CKAN dictionary of the owner organization
+        CKAN dictionary of the owner organization; creates factory
+        organization if set to None
     resource_path: str or pathlib.Path
         path to the resource file to upload. If not specified, then
         no resource is created for the dataset

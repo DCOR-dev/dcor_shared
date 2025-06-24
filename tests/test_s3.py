@@ -44,6 +44,23 @@ def test_create_bucket_again():
     assert bucket3 is not bucket, "new object"
 
 
+def test_iter_bucket_objects():
+    path = data_path / "calibration_beads_47.rtdc"
+    bucket_name = f"test-circle-{uuid.uuid4()}"
+    rid = str(uuid.uuid4())
+    object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
+    s3.upload_file(
+        bucket_name=bucket_name,
+        object_name=object_name,
+        path=path,
+        sha256=sha256sum(path),
+        private=True)
+    assert len(list(s3.iter_bucket_objects(bucket_name,
+                                           older_than_days=0))) == 1
+    assert len(list(s3.iter_bucket_objects(bucket_name,
+                                           older_than_days=1))) == 0
+
+
 def test_make_object_public(tmp_path):
     path = data_path / "calibration_beads_47.rtdc"
     bucket_name = f"test-circle-{uuid.uuid4()}"
