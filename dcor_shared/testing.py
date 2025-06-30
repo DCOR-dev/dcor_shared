@@ -46,6 +46,22 @@ def create_with_upload_no_temp(clean_db, ckan_config, monkeypatch):
     return factory
 
 
+def activate_dataset(ds_id, create_context=None):
+    """Activate a dataset by setting its "state" to "active"."""
+
+    if create_context is None:
+        user = factories.Sysadmin()
+        create_context = {'ignore_auth': False,
+                          'user': user['name'],
+                          'api_version': 3}
+
+    revise_dict = {
+        "match": {"id": ds_id},
+        "update": {"state": "active"}
+    }
+    helpers.call_action("package_revise", create_context, **revise_dict)
+
+
 def make_dataset(create_context=None, owner_org=None, create_with_upload=None,
                  resource_path=None, activate=False, **kwargs):
     """Create a dataset with a resource for testing"""
@@ -92,11 +108,7 @@ def make_dataset(create_context=None, owner_org=None, create_with_upload=None,
                            dataset_id=ds["id"])
 
     if activate:
-        revise_dict = {
-            "match": {"id": ds["id"]},
-            "update": {"state": "active"}
-        }
-        helpers.call_action("package_revise", create_context, **revise_dict)
+        activate_dataset(ds["id"], create_context)
 
     ds_dict = helpers.call_action("package_show", id=ds["id"])
 
@@ -180,11 +192,7 @@ def make_dataset_via_s3(
         rid = None
 
     if activate:
-        revise_dict = {
-            "match": {"id": ds_dict["id"]},
-            "update": {"state": "active"}
-        }
-        helpers.call_action("package_revise", create_context, **revise_dict)
+        activate_dataset(ds_dict["id"], create_context)
 
     ds_dict = helpers.call_action("package_show", id=ds_dict["id"])
 
