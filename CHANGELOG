@@ -1,3 +1,5 @@
+0.15.1
+ - enh: ensure Path class in `testing.make_resource_via_s3`
 0.15.0
  - feat: add `s3.iter_buckets`
  - feat: add `s3.iter_bucket_objects`

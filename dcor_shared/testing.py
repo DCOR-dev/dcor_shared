@@ -222,6 +222,7 @@ def make_resource_via_s3(
         ret_dict: bool = False,
         ):
     """Upload a resource to S3 and register it with CKAN"""
+    resource_path = pathlib.Path(resource_path)
     if create_context is not None:
         warnings.warn("Create context has no effect for creating resources "
                       f"via S3 for testing (got {create_context})",
