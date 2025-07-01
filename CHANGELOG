@@ -1,3 +1,6 @@
+1.0.0
+ - ref: remove deprecations (`s3cc.object_exists`, `make_dataset`,
+   `make_resource`, `create_context` arg in `make_resource_via_s3`)
 0.15.1
  - enh: new method `testing.activate_dataset`
  - enh: ensure Path class in `testing.make_resource_via_s3`

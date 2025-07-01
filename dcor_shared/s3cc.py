@@ -8,7 +8,6 @@ import io
 import functools
 import pathlib
 from typing import Literal
-import warnings
 
 import dclab
 from dclab.rtdc_dataset import fmt_hdf5, fmt_s3
@@ -296,20 +295,6 @@ def make_resource_public(resource_id: str,
         s3.make_object_public(bucket_name=bucket_name,
                               object_name=object_name,
                               missing_ok=missing_ok)
-
-
-def object_exists(
-        resource_id: str,
-        artifact: Literal["condensed", "preview", "resource"] = "resource"):
-    """Check whether an artifact is available on S3
-
-    The resource with the identifier `resource_id` must exist in the
-    CKAN database.
-    """
-    warnings.warn("`s3cc.object_exists` is deprecated, please use"
-                  "`s3cc.artifact_exists` instead",
-                  DeprecationWarning)
-    return artifact_exists(resource_id, artifact)
 
 
 def upload_artifact(

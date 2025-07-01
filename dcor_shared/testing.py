@@ -5,7 +5,6 @@ import numbers
 import pathlib
 from typing import Dict, List
 import uuid
-import warnings
 
 import ckan.authz
 import ckan.model
@@ -60,64 +59,6 @@ def activate_dataset(ds_id, create_context=None):
         "update": {"state": "active"}
     }
     helpers.call_action("package_revise", create_context, **revise_dict)
-
-
-def make_dataset(create_context=None, owner_org=None, create_with_upload=None,
-                 resource_path=None, activate=False, **kwargs):
-    """Create a dataset with a resource for testing"""
-    warnings.warn(
-        "`make_dataset` is deprecated, use `make_dataset_via_s3` instead",
-        DeprecationWarning)
-
-    if create_context is None:
-        user = factories.User()
-        create_context = {'ignore_auth': False,
-                          'user': user['name'],
-                          'api_version': 3}
-        user_id = user["id"]
-    else:
-        # get user ID from create_context
-        user_id = ckan.authz.get_user_id_for_username(
-            create_context["user"], allow_none=True)
-
-    if owner_org is None:
-        owner_org = factories.Organization(users=[{
-            'name': user_id,
-            'capacity': 'admin'
-        }])
-
-    if "title" not in kwargs:
-        kwargs["title"] = "test-dataset"
-    if "authors" not in kwargs:
-        kwargs["authors"] = "Peter Pan"
-    if "license_id" not in kwargs:
-        kwargs["license_id"] = "CC-BY-4.0"
-    assert "state" not in kwargs, "must not be set"
-    assert "owner_org" not in kwargs, "must not be set"
-    # create a dataset
-    ds = helpers.call_action("package_create", create_context,
-                             owner_org=owner_org["name"],
-                             state="draft",
-                             **kwargs
-                             )
-
-    if create_with_upload is not None:
-        rs = make_resource(resource_path=resource_path,
-                           create_with_upload=create_with_upload,
-                           create_context=create_context,
-                           dataset_id=ds["id"])
-
-    if activate:
-        activate_dataset(ds["id"], create_context)
-
-    ds_dict = helpers.call_action("package_show", id=ds["id"])
-
-    if create_with_upload is not None:
-        # updated resource dictionary
-        rs_dict = helpers.call_action("resource_show", id=rs["id"])
-        return ds_dict, rs_dict
-    else:
-        return ds_dict
 
 
 def make_dataset_via_s3(
@@ -204,37 +145,15 @@ def make_dataset_via_s3(
         return ds_dict
 
 
-def make_resource(resource_path, create_with_upload, create_context,
-                  dataset_id):
-    warnings.warn(
-        "`make_resource` is deprecated, use `make_resource_via_s3` instead",
-        DeprecationWarning)
-    content = resource_path.read_bytes()
-    rs = create_with_upload(
-        data=content,
-        filename='test.rtdc',
-        context=create_context,
-        package_id=dataset_id,
-        url="upload",
-    )
-    resource = helpers.call_action("resource_show", id=rs["id"])
-    return resource
-
-
 def make_resource_via_s3(
         resource_path: pathlib.Path | str,
         organization_id: str,
         dataset_id: str,
-        create_context: Dict = None,
         private: bool = False,
         ret_dict: bool = False,
         ):
     """Upload a resource to S3 and register it with CKAN"""
     resource_path = pathlib.Path(resource_path)
-    if create_context is not None:
-        warnings.warn("Create context has no effect for creating resources "
-                      f"via S3 for testing (got {create_context})",
-                      DeprecationWarning)
 
     user = factories.Sysadmin()
     create_context = {'ignore_auth': False,
