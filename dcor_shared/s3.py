@@ -363,9 +363,9 @@ def iter_buckets(for_circles_only=True):
         r4 = "[0-9a-f]{4}"
         r8 = "[0-9a-f]{8}"
         r12 = "[0-9a-f]{12}"
-        regex = re.compile(f"^{bucket_prefix}-{r8}-{r4}-{r4}-{r4}-{r12}$")
+        regex = re.compile(f"^{bucket_prefix}{r8}-{r4}-{r4}-{r4}-{r12}$")
     else:
-        regex = re.compile(f"^{bucket_prefix}-.*$")
+        regex = re.compile(f"^{bucket_prefix}.*$")
 
     # Iterate over all buckets that match the schema of this DCOR instance.
     paginator = s3_client.get_paginator('list_buckets')
