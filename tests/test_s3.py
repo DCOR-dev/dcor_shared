@@ -44,6 +44,23 @@ def test_create_bucket_again():
     assert bucket3 is not bucket, "new object"
 
 
+def iter_buckets_keep_non_circle():
+    bucket_prefix = get_ckan_config_option(
+        "dcor_object_store.bucket_name").format(organization_id="")
+    bucket_backup = f"{bucket_prefix}-backups"
+    s3.require_bucket(bucket_backup)
+    bucket_circle = f"{bucket_prefix}-13748aef-a5b5-a7b4-b86d-8a0c1ff49035"
+    s3.require_bucket(bucket_circle)
+
+    buckets_default = list(s3.iter_buckets())
+    assert bucket_backup not in buckets_default
+    assert bucket_circle in buckets_default
+
+    buckets_all = list(s3.iter_buckets(for_circles_only=False))
+    assert bucket_backup in buckets_all
+    assert bucket_circle in buckets_all
+
+
 def test_iter_bucket_objects():
     path = data_path / "calibration_beads_47.rtdc"
     bucket_name = f"test-circle-{uuid.uuid4()}"

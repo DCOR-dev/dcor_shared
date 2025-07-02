@@ -6,6 +6,7 @@ import functools
 import hashlib
 import json
 import pathlib
+import re
 import time
 import traceback
 from typing import List, Tuple
@@ -340,20 +341,38 @@ def is_available():
     return s3_key_id and s3_secret
 
 
-def iter_buckets():
-    """Iterator returning all buckets for this DCOR instance"""
+def iter_buckets(for_circles_only=True):
+    """Iterator returning all buckets for this DCOR instance
+
+    If `for_circles_only` is True (default), this method only returns
+    bucket names that belong to a circle via a regular expression, e.g.
+    "circle-13748aef-a5b5-47b4-b86d-8a0c1ff49035".
+    Otherwise, all buckets that match the `dcor_object_store.bucket_name`
+    prefix are returned.
+    The motivation of this argument is so that a DCOR instance can store
+    encrypted instance backups in a separate bucket while removing
+    orphaned S3 artifacts does not remove them.
+    """
     s3_client, _, _ = get_s3()
 
     # dcor_object_store.bucket_name
     bucket_prefix = get_ckan_config_option(
         "dcor_object_store.bucket_name").format(organization_id="")
 
+    if for_circles_only:
+        r4 = "[0-9a-f]{4}"
+        r8 = "[0-9a-f]{8}"
+        r12 = "[0-9a-f]{12}"
+        regex = re.compile(f"^{bucket_prefix}-{r8}-{r4}-{r4}-{r4}-{r12}$")
+    else:
+        regex = re.compile(f"^{bucket_prefix}-.*$")
+
     # Iterate over all buckets that match the schema of this DCOR instance.
     paginator = s3_client.get_paginator('list_buckets')
     for page in paginator.paginate():
         for bucket in page['Buckets']:
             bucket_name = bucket['Name']
-            if bucket_name.startswith(bucket_prefix):
+            if regex.match(bucket_name):
                 yield bucket_name
 
 
@@ -486,7 +505,7 @@ def prune_multipart_uploads(initiated_before_days: int = 5,
 
     ret_dict = {}
 
-    for bucket_name in iter_buckets():
+    for bucket_name in iter_buckets(for_circles_only=False):
         to_prune = []
         bdict = {"found": 0,
                  "ignored": 0
