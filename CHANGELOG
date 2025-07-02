@@ -1,3 +1,5 @@
+1.0.2
+ - ref: disable threading and use 1GiB threshold for multipart uploads
 1.0.1
  - enh: introduce `for_circles_only` kwarg for `iter_buckets`
 1.0.0

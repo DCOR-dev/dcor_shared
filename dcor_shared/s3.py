@@ -13,6 +13,7 @@ from typing import List, Tuple
 import warnings
 
 import boto3
+from boto3.s3.transfer import TransferConfig
 from botocore.config import Config
 import botocore.exceptions
 
@@ -677,9 +678,17 @@ def upload_file(bucket_name, object_name, path, sha256=None, private=True,
                                            object_name=object_name)
 
     if perform_upload:
+        config = TransferConfig(
+            # 1GiB threshold for multipart uploads
+            multipart_threshold=1 * 1024 * 1024 * 1024,
+            multipart_chunksize=1 * 1024 * 1024 * 1024,
+            # Disable threads
+            use_threads=False
+        )
         s3_client.upload_file(Filename=str(path),
                               Bucket=bucket_name,
                               Key=object_name,
+                              Config=config,
                               # ExtraArgs={
                               # # verification of the upload (breaks OpenStack)
                               # "ChecksumAlgorithm": "SHA256",
