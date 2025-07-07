@@ -149,11 +149,14 @@ def make_resource_via_s3(
         resource_path: pathlib.Path | str,
         organization_id: str,
         dataset_id: str,
+        resource_name: str = None,
         private: bool = False,
         ret_dict: bool = False,
         ):
     """Upload a resource to S3 and register it with CKAN"""
     resource_path = pathlib.Path(resource_path)
+    if resource_name is None:
+        resource_name = resource_path.name
 
     user = factories.Sysadmin()
     create_context = {'ignore_auth': False,
@@ -175,7 +178,7 @@ def make_resource_via_s3(
         "match": {"id": dataset_id},
         "update__resources__extend": [{
             "id": rid,
-            "name": resource_path.name,
+            "name": resource_name,
             "s3_available": True,
             }]
         }
