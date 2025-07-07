@@ -188,11 +188,18 @@ def get_s3_bucket_name_for_resource(resource_id):
 
 def get_s3_dc_handle(
         resource_id: str,
-        artifact: Literal["condensed", "preview", "resource"] = "resource"):
+        artifact: Literal["condensed", "preview", "resource"] = "resource",
+        enable_basins: bool = False,
+    ):
     """Return an instance of :class:`RTDC_S3`
 
     The data are accessed directly via S3 using DCOR's access credentials.
     Use this if you need to access the original raw file.
+
+    If you set `enable_basins` to True, basins of the data on S3 will
+    be considered. This is turned off for performance reasons. Note that
+    since an instance of `RTDC_S3` is returned, no local basins are
+    allowed.
 
     The resource with the identifier `resource_id` must exist in the
     CKAN database.
@@ -204,9 +211,7 @@ def get_s3_dc_handle(
             "dcor_object_store.access_key_id"),
         secret_access_key=get_ckan_config_option(
             "dcor_object_store.secret_access_key"),
-        # Disable basins, because they could point to files on the
-        # local file system (security).
-        enable_basins=False,
+        enable_basins=enable_basins,
     )
     return ds
 
