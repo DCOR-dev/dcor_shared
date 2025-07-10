@@ -34,10 +34,12 @@ def artifact_exists(
     return s3.object_exists(bucket_name=bucket_name, object_name=object_name)
 
 
-def compute_checksum(resource_id):
+def compute_checksum(
+        resource_id: str,
+        artifact: Literal["condensed", "preview", "resource"] = "resource"):
     """Compute the SHA256 checksum of the corresponding CKAN resource"""
     bucket_name, object_name = get_s3_bucket_object_for_artifact(
-        resource_id=resource_id, artifact="resource")
+        resource_id=resource_id, artifact=artifact)
     s3h = s3.compute_checksum(bucket_name=bucket_name, object_name=object_name)
     return s3h
 
@@ -190,7 +192,7 @@ def get_s3_dc_handle(
         resource_id: str,
         artifact: Literal["condensed", "preview", "resource"] = "resource",
         enable_basins: bool = False,
-    ):
+        ):
     """Return an instance of :class:`RTDC_S3`
 
     The data are accessed directly via S3 using DCOR's access credentials.

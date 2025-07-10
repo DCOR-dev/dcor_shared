@@ -1,4 +1,5 @@
 1.0.4
+ - enh: implement "artifact" kwarg for `s3cc.compute_checksum`
  - enh: introduce `enable_basins` in `s3cc.get_s3_dc_handle`
 1.0.3
  - enh: allow to specify resource name when creating test resource
