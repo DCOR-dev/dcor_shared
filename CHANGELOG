@@ -1,3 +1,12 @@
+1.1.0
+ - BREAKING: remove unused `paths.get_nginx_config_path`,
+   `paths.get_supervisord_worker_config_path`, `paths.get_uwsgi_config_path`,
+   and `VALID_FORMATS`
+ - BREAKING: remove the `testing.create_with_upload_no_temp` fixture
+   (resources cannot be uploaded via CKAN anymore)
+ - fix: use the actual site user instead of the user "default" in
+   `get_resource_info` and `wait_for_resource`
+ - enh: new `admin_context` returning the context of the site user
 1.0.4
  - enh: implement "artifact" kwarg for `s3cc.compute_checksum`
  - enh: introduce `enable_basins` in `s3cc.get_s3_dc_handle`
