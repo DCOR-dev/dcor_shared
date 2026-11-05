@@ -6,6 +6,8 @@ import uuid
 
 from ckan import logic
 
+import dcor_shared.data
+
 from dcor_shared import (
     get_dc_instance, s3, sha256sum, wait_for_resource
 )
@@ -98,6 +100,8 @@ def test_sha256sum(tmp_path):
 
 def test_wait_for_resource_s3(monkeypatch):
     res_id = str(uuid.uuid4())
+    monkeypatch.setattr(dcor_shared.data, "admin_context",
+                        lambda: {"ignore_auth": True})
     monkeypatch.setattr(logic, "get_action",
                         lambda x: lambda context, data_dict: {
                             "id": res_id,
@@ -108,6 +112,8 @@ def test_wait_for_resource_s3(monkeypatch):
 
 def test_wait_resource_not_available(monkeypatch):
     res_id = str(uuid.uuid4())
+    monkeypatch.setattr(dcor_shared.data, "admin_context",
+                        lambda: {"ignore_auth": True})
     monkeypatch.setattr(logic, "get_action",
                         lambda x: lambda context, data_dict: {
                             "id": res_id})

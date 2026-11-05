@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from io import BytesIO
 import numbers
 import pathlib
 from typing import Dict, List
@@ -10,39 +9,10 @@ import ckan.authz
 import ckan.model
 import ckan.tests.factories as factories
 import ckan.tests.helpers as helpers
-from ckan.tests.pytest_ckan.fixtures import FakeFileStorage
 import requests
-
-import pytest
 
 from .ckan import get_ckan_config_option
 from . import s3
-
-
-@pytest.fixture
-def create_with_upload_no_temp(clean_db, ckan_config, monkeypatch):
-    """
-    Create upload without tempdir
-    """
-
-    def factory(data, filename, context=None, **kwargs):
-        if context is None:
-            context = {}
-        action = kwargs.pop("action", "resource_create")
-        field = kwargs.pop("upload_field_name", "upload")
-        test_file = BytesIO()
-        if type(data) is not bytes:
-            data = bytes(data, encoding="utf-8")
-        test_file.write(data)
-        test_file.seek(0)
-        test_resource = FakeFileStorage(test_file, filename)
-
-        params = {
-            field: test_resource,
-        }
-        params.update(kwargs)
-        return helpers.call_action(action, context, **params)
-    return factory
 
 
 def activate_dataset(ds_id, create_context=None):

@@ -2,6 +2,7 @@ import functools
 import time
 
 from . import s3cc
+from .ckan import admin_context
 from .util import sha256sum  # noqa: F401
 
 
@@ -30,8 +31,7 @@ def wait_for_resource(resource_id: str,
     t0 = time.time()
     while True:
         try:
-            res_dict = resource_show(context={'ignore_auth': True,
-                                              'user': 'default'},
+            res_dict = resource_show(context=admin_context(),
                                      data_dict={"id": resource_id})
         except logic.NotFound:
             # Other processes are still working on getting the resource

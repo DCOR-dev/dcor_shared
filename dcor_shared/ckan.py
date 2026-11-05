@@ -4,6 +4,17 @@ import pathlib
 from .parse import get_ini_config_option
 
 
+def admin_context():
+    """Context of the CKAN site user (sysadmin)
+
+    The site user is named after `ckan.site_id`, which is "default"
+    unless specified otherwise.
+    """
+    from ckan import logic
+    site_user = logic.get_action("get_site_user")({"ignore_auth": True}, {})
+    return {'ignore_auth': True, 'user': site_user["name"]}
+
+
 def get_ckan_config_option(option):
     """Return the CKAN configuration option
 
@@ -64,10 +75,10 @@ def get_resource_info(resource_id):
     """
     from ckan import logic
     res_dict = logic.get_action("resource_show")(
-        context={'ignore_auth': True, 'user': 'default'},
+        context=admin_context(),
         data_dict={"id": resource_id})
     ds_dict = logic.get_action("package_show")(
-        context={'ignore_auth': True, 'user': 'default'},
+        context=admin_context(),
         data_dict={"id": res_dict["package_id"]})
     return ds_dict, res_dict
 
