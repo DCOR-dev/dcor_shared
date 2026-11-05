@@ -6,7 +6,8 @@ import ckan.tests.helpers as helpers
 import requests
 
 from dcor_shared.testing import (
-    make_dataset_via_s3, make_resource_via_s3, activate_dataset
+    make_dataset_via_s3, make_resource_via_s3, activate_dataset,
+    synchronous_enqueue_job
 )
 from dcor_shared import s3cc, sha256sum
 
@@ -73,3 +74,26 @@ def test_make_resource_via_s3_name(tmp_path):
 
     res_dict = helpers.call_action("resource_show", id=rid)
     assert res_dict["name"] == "peter.rtdc"
+
+
+@pytest.mark.ckan_config('ckan.plugins', 'dcor_schemas')
+@pytest.mark.usefixtures('clean_db', 'with_request_context')
+def test_make_resource_via_s3_ret_dict():
+    ds_dict = make_dataset_via_s3(activate=False)
+    res_dict = make_resource_via_s3(
+        resource_path=data_path / "calibration_beads_47.rtdc",
+        organization_id=ds_dict["organization"]["id"],
+        dataset_id=ds_dict["id"],
+        ret_dict=True,
+    )
+    assert res_dict["package_id"] == ds_dict["id"]
+    assert res_dict["name"] == "calibration_beads_47.rtdc"
+    assert res_dict["s3_available"]
+
+
+def test_synchronous_enqueue_job():
+    calls = []
+    synchronous_enqueue_job(lambda *args, **kwargs: calls.append(
+        (args, kwargs)), args=[1], kwargs={"a": 2})
+    synchronous_enqueue_job(lambda: calls.append("no args"))
+    assert calls == [((1,), {"a": 2}), "no args"]

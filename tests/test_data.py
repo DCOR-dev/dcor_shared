@@ -120,3 +120,39 @@ def test_wait_resource_not_available(monkeypatch):
     # Should raise an exception
     with pytest.raises(OSError, match="Data import seems to take too long"):
         wait_for_resource(res_id, timeout=1)
+
+
+def test_wait_for_resource_invalid_id():
+    with pytest.raises(ValueError, match="Invalid resource id"):
+        wait_for_resource("peter")
+
+
+def test_wait_for_resource_artifact_exists(monkeypatch):
+    res_id = str(uuid.uuid4())
+    monkeypatch.setattr(dcor_shared.data, "admin_context",
+                        lambda: {"ignore_auth": True})
+    monkeypatch.setattr(logic, "get_action",
+                        lambda x: lambda context, data_dict: {"id": res_id})
+    monkeypatch.setattr(dcor_shared.s3cc, "artifact_exists",
+                        lambda rid: rid == res_id)
+    # Should not raise an exception
+    wait_for_resource(res_id)
+
+
+def test_wait_for_resource_not_found_first(monkeypatch):
+    res_id = str(uuid.uuid4())
+    calls = []
+
+    def resource_show(context, data_dict):
+        calls.append(data_dict["id"])
+        if len(calls) == 1:
+            # resource is not yet in the database
+            raise logic.NotFound()
+        return {"id": res_id, "s3_available": True}
+
+    monkeypatch.setattr(dcor_shared.data, "admin_context",
+                        lambda: {"ignore_auth": True})
+    monkeypatch.setattr(logic, "get_action", lambda x: resource_show)
+    monkeypatch.setattr(dcor_shared.data.time, "sleep", lambda x: None)
+    wait_for_resource(res_id)
+    assert calls == [res_id, res_id]
