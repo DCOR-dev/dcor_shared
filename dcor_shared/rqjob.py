@@ -53,7 +53,7 @@ class RQJob:
             "job_id": jid_cur,
         }
         if self.depends_on:
-            rq_args["depends_on"] = [f"{jid}_{dep}" for dep in self.depends_on]
+            rq_args["depends_on"] = [f"{jid}{dep}" for dep in self.depends_on]
 
         if not Job.exists(jid_cur, connection=redis_connect):
             toolkit.enqueue_job(self.method,
@@ -69,9 +69,10 @@ class RQJob:
         from ckan.lib.jobs import _connect as ckan_redis_connect
         redis_connect = ckan_redis_connect()
 
-        for inst in cls._instances:
-            if inst.ckanext == ckanext:
-                inst.enqueue_job(resource, redis_connect=redis_connect)
+        # Jobs must be enqueued after the jobs they depend on, otherwise
+        # RQ ignores the dependency.
+        for inst in cls.get_all_job_methods_in_order(ckanext):
+            inst.enqueue_job(resource, redis_connect=redis_connect)
 
     @classmethod
     def get_all_job_methods_in_order(cls, ckanext: str):

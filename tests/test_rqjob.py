@@ -1,6 +1,10 @@
 from unittest import mock
+import uuid
+
+from ckan.lib.jobs import _connect as ckan_redis_connect
 
 import pytest
+from rq.job import Job
 
 from dcor_shared import RQJob, rqjob_register
 
@@ -89,3 +93,45 @@ def test_rqjob_enqueue_job_exists():
         job.enqueue_job({"package_id": "pkg", "position": 0},
                         redis_connect=mock.MagicMock())
     enqueue_job.assert_not_called()
+
+
+def job_first(resource):
+    """First job"""
+
+
+def job_second(resource):
+    """Second job"""
+
+
+def job_third(resource):
+    """Third job"""
+
+
+@pytest.mark.usefixtures("clean_rqjob_instances")
+def test_rqjob_enqueue_all_jobs_depends_on():
+    # register in reverse order of dependencies
+    RQJob(job_third, ckanext="test_ext",
+          depends_on=["job_first", "job_second"])
+    RQJob(job_second, ckanext="test_ext", depends_on=["job_first"])
+    RQJob(job_first, ckanext="test_ext")
+
+    pkg_id = str(uuid.uuid4())
+    RQJob.enqueue_all_jobs({"package_id": pkg_id, "position": 0},
+                           ckanext="test_ext")
+    redis_connect = ckan_redis_connect()
+    jobs = [Job.fetch(f"{pkg_id}_0_{name}", connection=redis_connect)
+            for name in ["job_first", "job_second", "job_third"]]
+    try:
+        def dependencies(job):
+            return sorted(dep.id for dep in job.fetch_dependencies())
+
+        assert dependencies(jobs[0]) == []
+        assert dependencies(jobs[1]) == [jobs[0].id]
+        assert dependencies(jobs[2]) == sorted([jobs[0].id, jobs[1].id])
+        # no worker is running, so the dependent jobs must wait
+        assert jobs[0].get_status() == "queued"
+        assert jobs[1].get_status() == "deferred"
+        assert jobs[2].get_status() == "deferred"
+    finally:
+        for job in jobs:
+            job.delete()
