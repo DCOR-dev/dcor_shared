@@ -1,4 +1,7 @@
 1.1.3
+ - fix: `testing.synchronous_enqueue_job` runs jobs that are enqueued
+   within a nested transaction after the outermost transaction is
+   committed (CKAN 2.12 runs `package_update` in a nested transaction)
  - ref: connect to Redis via `ckan.lib.redis.connect_to_redis`, since
    `ckan.lib.jobs._connect` does not exist anymore in CKAN 2.12
  - tests: use Redis 7 in CI (CKAN 2.12 requires Redis >= 6)

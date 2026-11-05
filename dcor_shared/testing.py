@@ -10,6 +10,7 @@ import ckan.model
 import ckan.tests.factories as factories
 import ckan.tests.helpers as helpers
 import requests
+import sqlalchemy
 
 from .ckan import get_ckan_config_option
 from . import s3
@@ -160,6 +161,10 @@ def make_resource_via_s3(
         return rid
 
 
+#: jobs from :func:`synchronous_enqueue_job` waiting for a commit
+_pending_jobs = []
+
+
 def synchronous_enqueue_job(job_func, args=None, kwargs=None, title=None,
                             queue=None, rq_kwargs=None):
     """
@@ -175,12 +180,44 @@ def synchronous_enqueue_job(job_func, args=None, kwargs=None, title=None,
     Also, since we are running the tests as root on a ckan instance that
     is run by www-data, modifying files on disk in background jobs
     (which were started by supervisor as www-data) does not work.
+
+    If the job is enqueued within a nested database transaction (CKAN 2.12
+    runs `package_update` in one), the job is run after the outermost
+    transaction is committed. Running it right away would commit the
+    session and close the nested transaction. In production, the jobs
+    are run by a separate worker.
     """
     if rq_kwargs is None:
         rq_kwargs = {}
     args = args or []
     kwargs = kwargs or {}
-    job_func(*args, **kwargs)
+    session = ckan.model.Session()
+    if session.in_nested_transaction():
+        _pending_jobs.append((job_func, args, kwargs))
+        for name, func in [("after_commit", _on_commit),
+                           ("after_transaction_end", _run_pending_jobs)]:
+            if not sqlalchemy.event.contains(session, name, func):
+                sqlalchemy.event.listen(session, name, func)
+    else:
+        job_func(*args, **kwargs)
+
+
+def _on_commit(session):
+    # `after_commit` is also called when a nested transaction is committed
+    if not session.in_nested_transaction():
+        session.info["dcor_shared_committed"] = True
+
+
+def _run_pending_jobs(session, transaction):
+    """Run pending jobs after the outermost transaction ended"""
+    if transaction.parent is not None:
+        return
+    committed = session.info.pop("dcor_shared_committed", False)
+    jobs = list(_pending_jobs)
+    _pending_jobs.clear()
+    if committed:
+        for job_func, args, kwargs in jobs:
+            job_func(*args, **kwargs)
 
 
 def upload_presigned_to_s3(
