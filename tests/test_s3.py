@@ -47,9 +47,9 @@ def test_create_bucket_again():
 def test_iter_buckets_keep_non_circle():
     bucket_prefix = get_ckan_config_option(
         "dcor_object_store.bucket_name").format(organization_id="")
-    bucket_backup = f"{bucket_prefix}-backups"
+    bucket_backup = f"{bucket_prefix}backups"
     s3.require_bucket(bucket_backup)
-    bucket_circle = f"{bucket_prefix}-13748aef-a5b5-a7b4-b86d-8a0c1ff49035"
+    bucket_circle = f"{bucket_prefix}13748aef-a5b5-a7b4-b86d-8a0c1ff49035"
     s3.require_bucket(bucket_circle)
 
     buckets_default = list(s3.iter_buckets())
