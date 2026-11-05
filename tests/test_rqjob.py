@@ -1,7 +1,7 @@
 from unittest import mock
 import uuid
 
-from ckan.lib.jobs import _connect as ckan_redis_connect
+from ckan.lib.redis import connect_to_redis
 
 import pytest
 from rq.job import Job
@@ -70,7 +70,7 @@ def test_rqjob_enqueue_all_jobs():
     RQJob(job_b, ckanext="test_ext", timeout=10)
     RQJob(job_c, ckanext="other_ext")
     resource = {"package_id": "pkg", "position": 0}
-    with mock.patch("ckan.lib.jobs._connect"), \
+    with mock.patch("ckan.lib.redis.connect_to_redis"), \
             mock.patch("rq.job.Job.exists", return_value=False), \
             mock.patch("ckan.plugins.toolkit.enqueue_job") as enqueue_job:
         RQJob.enqueue_all_jobs(resource, ckanext="test_ext")
@@ -118,7 +118,7 @@ def test_rqjob_enqueue_all_jobs_depends_on():
     pkg_id = str(uuid.uuid4())
     RQJob.enqueue_all_jobs({"package_id": pkg_id, "position": 0},
                            ckanext="test_ext")
-    redis_connect = ckan_redis_connect()
+    redis_connect = connect_to_redis()
     jobs = [Job.fetch(f"{pkg_id}_0_{name}", connection=redis_connect)
             for name in ["job_first", "job_second", "job_third"]]
     try:

@@ -39,11 +39,11 @@ class RQJob:
     def enqueue_job(self, resource: Dict, redis_connect=None):
         # Import here so module can be loaded without ckan available
         import ckan.plugins.toolkit as toolkit
-        from ckan.lib.jobs import _connect as ckan_redis_connect
+        from ckan.lib.redis import connect_to_redis
         from rq.job import Job
 
         if redis_connect is None:
-            redis_connect = ckan_redis_connect()
+            redis_connect = connect_to_redis()
 
         jid = f"{resource['package_id']}_{resource['position']}_"
         jid_cur = jid + self.name
@@ -66,8 +66,8 @@ class RQJob:
     def enqueue_all_jobs(cls,
                          resource: Dict,
                          ckanext: str):
-        from ckan.lib.jobs import _connect as ckan_redis_connect
-        redis_connect = ckan_redis_connect()
+        from ckan.lib.redis import connect_to_redis
+        redis_connect = connect_to_redis()
 
         # Jobs must be enqueued after the jobs they depend on, otherwise
         # RQ ignores the dependency.
