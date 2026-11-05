@@ -1,4 +1,7 @@
 1.1.1
+ - fix: `RQJob` dependencies were never honored, because the job IDs
+   in `depends_on` had a superfluous underscore and dependent jobs
+   were enqueued before the jobs they depend on
  - tests: increase coverage (parse, RQJob, config helpers,
    `wait_for_resource`, S3 helpers)
  - tests: actually run `test_iter_buckets_keep_non_circle`
