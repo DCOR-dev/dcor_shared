@@ -1,3 +1,9 @@
+1.1.1
+ - tests: increase coverage (parse, RQJob, config helpers,
+   `wait_for_resource`, S3 helpers)
+ - tests: actually run `test_iter_buckets_keep_non_circle`
+ - tests: remove unused `requests_toolbelt` requirement
+ - ci: report coverage to Codecov
 1.1.0
  - BREAKING: remove unused `paths.get_nginx_config_path`,
    `paths.get_supervisord_worker_config_path`, `paths.get_uwsgi_config_path`,

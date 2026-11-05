@@ -44,12 +44,12 @@ def test_create_bucket_again():
     assert bucket3 is not bucket, "new object"
 
 
-def iter_buckets_keep_non_circle():
+def test_iter_buckets_keep_non_circle():
     bucket_prefix = get_ckan_config_option(
         "dcor_object_store.bucket_name").format(organization_id="")
-    bucket_backup = f"{bucket_prefix}-backups"
+    bucket_backup = f"{bucket_prefix}backups"
     s3.require_bucket(bucket_backup)
-    bucket_circle = f"{bucket_prefix}-13748aef-a5b5-a7b4-b86d-8a0c1ff49035"
+    bucket_circle = f"{bucket_prefix}13748aef-a5b5-a7b4-b86d-8a0c1ff49035"
     s3.require_bucket(bucket_circle)
 
     buckets_default = list(s3.iter_buckets())
@@ -602,3 +602,28 @@ def test_upload_wrong_sha256():
             path=path,
             sha256="INCORRECT-CHECKSUM",
             private=False)
+
+
+def test_iter_bucket_objects_no_such_bucket():
+    bucket_name = f"test-circle-{uuid.uuid4()}"
+    assert list(s3.iter_bucket_objects(bucket_name)) == []
+
+
+def test_presigned_url_filename():
+    path = data_path / "calibration_beads_47.rtdc"
+    bucket_name = f"test-circle-{uuid.uuid4()}"
+    rid = str(uuid.uuid4())
+    object_name = f"resource/{rid[:3]}/{rid[3:6]}/{rid[6:]}"
+    s3.upload_file(
+        bucket_name=bucket_name,
+        object_name=object_name,
+        path=path,
+        sha256=sha256sum(path),
+        private=True)
+    ps_url = s3.create_presigned_url(bucket_name=bucket_name,
+                                     object_name=object_name,
+                                     filename="peter.rtdc")
+    response = requests.get(ps_url)
+    assert response.ok
+    assert response.headers["Content-Disposition"] == \
+        "attachment; filename = peter.rtdc"
